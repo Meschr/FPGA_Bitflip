@@ -1,4 +1,4 @@
-# FPGA - Bitflio
+# FPGA - Bitflip
 
 Every assignment/project should follow this project structure
 
