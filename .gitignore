@@ -1,0 +1,46 @@
+# ============================================================
+# Quartus / Altera build artifacts
+# ============================================================
+
+# Database & incremental compilation (massive, fully regenerated)
+db/
+incremental_db/
+
+# Compiled output files (SOF, POF, etc.)
+output_files/
+
+# Qsys / Platform Designer generated files
+.qsys_edit/
+
+# Quartus temporary / backup files
+*.bak
+*.qws
+*.ppf
+*.ddb
+*.cmp
+
+# ============================================================
+# GHDL / Simulation artifacts
+# ============================================================
+
+# GHDL work library (compiled .cf and object files)
+work/
+
+# VCD / GHW waveform dumps
+waves/
+*.vcd
+*.ghw
+
+# Simulation report
+*_nativelink_simulation.rpt
+
+# ModelSim / Quartus simulation directory
+simulation/
+
+# ============================================================
+# General
+# ============================================================
+*.o
+*.exe
+*.cf
+*~
