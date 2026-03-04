@@ -14,7 +14,6 @@ Every assignment/project should follow this project structure
 ├── waves/                      # Generated VCD waveform files (git-ignored)
 ├── work/                       # GHDL compiled library (git-ignored)
 ├── simulate.sh                 # GHDL simulation script
-├── run.sh                      # Quartus build helper
 ├── Excercise1.qpf              # Quartus project file
 ├── Excercise1.qsf              # Quartus settings & pin assignments
 └── README.md

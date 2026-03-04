@@ -19,7 +19,9 @@ architecture rtl of fcs_check_serial is
     signal crc_reg  : std_logic_vector(31 downto 0) := (others => '1');
     signal feedback : std_logic;
     signal active   : std_logic := '0';
+	 signal fcs_in   : std_logic := '0';
     signal check    : std_logic := '0';  -- one-cycle pulse after last FCS bit
+	 signal fcs_cnt   : unsigned(5 downto 0) := (others => '0');
 	
 	begin
 	
@@ -28,8 +30,9 @@ architecture rtl of fcs_check_serial is
 		process(clk, reset)
 		begin
         if reset = '1' then
-            crc_reg   <= (others => '1');
+            crc_reg   <= (others => '0');
             active    <= '0';
+				fcs_in    <= '0';
             check     <= '0';
             fcs_error <= '0';
 				
@@ -55,13 +58,35 @@ architecture rtl of fcs_check_serial is
 				
 				-- End of frame reached raise check to evaluate residue
 				if end_of_frame = '1' then
+					 if feedback = '1' then
+                    crc_reg <= (crc_reg(30 downto 0) & '0') xor x"04C11DB7";
+                else
+                    crc_reg <= (crc_reg(30 downto 0) & '0');
+                end if;
+				
                 active <= '0';
-                check  <= '1';
+                fcs_in  <= '1';
+					 fcs_cnt <= to_unsigned(1, fcs_cnt'length);
             end if;
+				
+				if fcs_in = '1' then 
+					if feedback = '1' then
+						crc_reg <= (crc_reg(30 downto 0) & '0') xor x"04C11DB7";
+					else
+						crc_reg <= (crc_reg(30 downto 0) & '0');
+					end if;
+				
+					fcs_cnt <= fcs_cnt + 1;
+					
+					if fcs_cnt = to_unsigned(31, fcs_cnt'length) then
+						check <= '1';
+						fcs_in <= '0';
+					end if;
+				end if;
 				
 				-- Evaluate Residue
 				if check = '1' then
-                if unsigned(crc_reg) = x"C704DD7B" then
+                if unsigned(crc_reg) = x"00000000" then
                     fcs_error <= '0';
                 else
                     fcs_error <= '1';

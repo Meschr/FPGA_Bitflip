@@ -95,7 +95,7 @@ architecture sim of tb_fcs_check_serial is
         eof <= '0';
 
         for byte_idx in packet'range loop
-            for bit_idx in 0 to 7 loop
+            for bit_idx in 7 to 0 loop
                 bit_count := (byte_idx - packet'low) * 8 + bit_idx;
 
                 din <= packet(byte_idx)(bit_idx);
