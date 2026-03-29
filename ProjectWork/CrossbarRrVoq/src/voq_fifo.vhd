@@ -35,7 +35,7 @@ entity voq_fifo is
         rd_eof      : out std_logic;                      -- '1' beim letzten Byte
 
         -- Status
-        frame_rdy   : out std_logic;                      -- mind. 1 kompletter Frame drin
+        frame_rdy   : out std_logic;                      -- mind. 1 kompletter Frame drind
         full        : out std_logic;                      -- FIFO voll (Backpressure)
         empty       : out std_logic                       -- FIFO leer
     );
@@ -63,17 +63,17 @@ architecture rtl of voq_fifo is
     signal ram : ram_t;
 
     -- Schreib- und Lesezeiger
-    signal wr_ptr   : unsigned(ADDR_WIDTH - 1 downto 0);
-    signal rd_ptr   : unsigned(ADDR_WIDTH - 1 downto 0);
+    signal wr_ptr   : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal rd_ptr   : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0');
 
-    -- Füllstand (ein Bit mehr als Adresse, für voll/leer Unterscheidung)
-    signal count    : unsigned(ADDR_WIDTH downto 0);
+    -- F�llstand (ein Bit mehr als Adresse, f�r voll/leer Unterscheidung)
+    signal count    : unsigned(ADDR_WIDTH downto 0) := (others => '0');
 
-    -- Frame-Zähler: wie viele komplette Frames liegen im FIFO
-    signal frames_stored : unsigned(7 downto 0);  -- max 255 Frames
+    -- Frame-Z�hler: wie viele komplette Frames liegen im FIFO
+    signal frames_stored : unsigned(7 downto 0) := (others => '0');  -- max 255 Frames
 
     -- Lese-Register
-    signal rd_reg   : std_logic_vector(8 downto 0);
+    signal rd_reg   : std_logic_vector(8 downto 0) := (others => '0');
 
     -- Verzögertes rd_en: gibt an, ob rd_reg im letzten Takt frisch geladen wurde.
     -- Nötig weil das BRAM synchron liest: rd_reg ist erst einen Takt NACH rd_en gültig.
@@ -101,7 +101,9 @@ begin
     read_proc : process(clk)
     begin
         if rising_edge(clk) then
-            if rd_en = '1' then
+            if reset = '1' then
+                rd_reg <= (others => '0');
+            elsif rd_en = '1' then
                 rd_reg <= ram(to_integer(rd_ptr));
             end if;
         end if;

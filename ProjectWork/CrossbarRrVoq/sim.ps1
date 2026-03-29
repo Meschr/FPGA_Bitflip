@@ -41,7 +41,20 @@ Write-Host ""
 $srcChoice = Read-Host "Welche kompilieren? (Nummer, mehrere mit Komma, oder A fuer alle)"
 
 if ($srcChoice -eq "A" -or $srcChoice -eq "a") {
-    $selectedSrc = $srcFiles
+    $preferredOrder = @(
+        "voq_fifo.vhd",
+        "voq_matrix.vhd",
+        "round_robin.vhd",
+        "crossbar_switch.vhd",
+        "switch_core.vhd"
+    )
+    $selectedSrc = @()
+    foreach ($name in $preferredOrder) {
+        $item = $srcFiles | Where-Object { $_.Name -ieq $name }
+        if ($item) { $selectedSrc += $item }
+    }
+    $remaining = $srcFiles | Where-Object { $preferredOrder -notcontains $_.Name }
+    if ($remaining.Count -gt 0) { $selectedSrc += $remaining }
 } else {
     $indices = $srcChoice -split "," | ForEach-Object { [int]$_.Trim() - 1 }
     $selectedSrc = $indices | ForEach-Object { $srcFiles[$_] }
