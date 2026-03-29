@@ -88,6 +88,23 @@ bash simulate.sh fcs_check_serial_tb
 bash simulate.sh tb_fcs_serial
 ```
 
+### Windows — `sim.ps1`
+
+Interaktives Skript für Windows, das Analyse, Elaborate und Simulation in einem
+geführten Ablauf zusammenfasst und optional GTKWave öffnet.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\sim.ps1
+```
+
+> `-ExecutionPolicy Bypass` ist nötig, da Windows lokale `.ps1`-Skripte
+> standardmäßig blockiert. Gilt nur für diesen Aufruf.
+
+Das Skript fragt interaktiv, welche **Source-Dateien** (`src/*.vhd`) kompiliert
+und welche **Testbench** (`tb/tb_*.vhd`) simuliert werden soll. Der Entity-Name
+wird aus dem Dateinamen abgeleitet — beide müssen übereinstimmen.
+Ausgabe landet in `waves/<entity>.ghw`.
+
 ### Finding Entity Names
 
 If you're unsure what entity names are available, run:
@@ -115,11 +132,13 @@ gtkwave waves/fcs_check_serial_tb.vcd
 
 ## Quick Reference
 
-| Task                       | Command                           |
-| -------------------------- | --------------------------------- |
-| Run default testbench      | `bash simulate.sh`                |
-| Run specific testbench     | `bash simulate.sh <entity_name>`  |
-| Find available testbenches | `grep -n "^entity" tb/*.vhd`      |
-| View waveform              | `gtkwave waves/<entity_name>.vcd` |
-| Clean build artifacts      | `rm -rf work/ waves/`             |
-| Open Quartus project       | `quartus Excercise1.qpf`          |
+| Task                              | Command                                                  |
+| --------------------------------- | -------------------------------------------------------- |
+| Run default testbench (Linux/WSL) | `bash simulate.sh`                                       |
+| Run specific testbench            | `bash simulate.sh <entity_name>`                         |
+| Run interactive sim (Windows)     | `powershell -ExecutionPolicy Bypass -File .\sim.ps1`     |
+| Find available testbenches        | `grep -n "^entity" tb/*.vhd`                             |
+| View waveform (VCD)               | `gtkwave waves/<entity_name>.vcd`                        |
+| View waveform (GHW)               | `gtkwave waves/<entity_name>.ghw`                        |
+| Clean build artifacts             | `rm -rf work/ waves/`                                    |
+| Open Quartus project              | `quartus Excercise1.qpf`                                 |
