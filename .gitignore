@@ -18,6 +18,9 @@ output_files/
 *.ppf
 *.ddb
 *.cmp
+*.qpf
+*.qsf
+*.txt
 
 # ============================================================
 # GHDL / Simulation artifacts
