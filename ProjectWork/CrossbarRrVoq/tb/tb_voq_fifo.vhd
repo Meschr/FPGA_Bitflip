@@ -46,6 +46,7 @@ begin
         port map (
             clk       => clk,
             reset     => reset,
+            flush     => '0',  -- Kein Flush in diesem Testbench
             wr_en     => wr_en,
             wr_data   => wr_data,
             wr_eof    => wr_eof,
