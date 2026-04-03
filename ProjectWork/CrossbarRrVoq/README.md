@@ -72,10 +72,11 @@ Jede Stufe hat eine klare Aufgabe und definierte Signale zu den Nachbarstufen.
 | Round-Robin | `round_robin.vhd` | 4× Arbiter mit Frame-Lock (FSM: IDLE/LOCKED) | Fertig, getestet |
 | VOQ-FIFO | `voq_fifo.vhd` | Generischer Store-and-Forward FIFO, frame_rdy, flush, rd_valid | Fertig, getestet |
 | VOQ 4:1 | `voq_4to1.vhd` | 4 VOQ-FIFOs für einen Ausgangsport gebündelt | Fertig, getestet |
-| VOQ+RR+Crossbar | `voq_rr_crossbar_top.vhd` | Single-Output Top-Level: VOQ + RR + Crossbar verdrahtet | Fertig, getestet |
+| VOQ+RR+Crossbar (Single) | `voq_rr_crossbar_top.vhd` | Single-Output Top-Level: VOQ + RR + Crossbar verdrahtet | Fertig, getestet |
+| VOQ+RR+Crossbar (4-Port) | `voq_rr_crossbar_switch_top.vhd` | 4-Port Switch-Fabric: 4× VOQ + 4× RR + Crossbar | Fertig, getestet |
 | FCS-Block | `fcs_check.vhd` | CRC-32 Berechnung + Frame-Puffer, nur gute Frames weiter | Ausstehend |
 | MAC-Learning | `mac_table.vhd` | SMAC lernen, DMAC nachschlagen, dest_port bestimmen | Ausstehend |
-| Top-Level (4-Port) | `switch_core.vhd` | Vollständige Verdrahtung aller 4 Ports, Top-Level Entity | Ausstehend |
+| Top-Level (4-Port, vollständig) | `switch_core.vhd` | Vollständige Pipeline: FCS + MAC-Learning + Switch-Fabric | Ausstehend |
 
 ### 4.3 Top-Level Interface
 
@@ -227,11 +228,44 @@ Eingang 0..3 ──► voq_4to1 ──► rd_data_0..3 ──► crossbar_switch
 | `rr_sel` / `rr_grant` / `rr_active` | out | Debug: RR-Status |
 | `frame_rdy_dbg` / `rd_eof_dbg` / `full_dbg` / `empty_dbg` | out | Debug: FIFO-Status |
 
-**Hinweis:** Aktuell wird nur MUX 0 des Crossbar genutzt. Für den vollständigen 4-Port-Switch wird `switch_core.vhd` 4 solche Pfade instanziieren.
+**Hinweis:** Aktuell wird nur MUX 0 des Crossbar genutzt. Das vollständige 4-Port-Top-Level ist in `voq_rr_crossbar_switch_top.vhd` (Abschnitt 5.6) realisiert.
 
 **Testbench:** `tb_voq_rr_crossbar.vhd`
 
-### 5.6 FCS-Block (`fcs_check.vhd`) — Ausstehend
+### 5.6 VOQ+RR+Crossbar 4-Port Top-Level (`voq_rr_crossbar_switch_top.vhd`) — Fertig
+
+**Funktion:** Vollständige 4×4 Switch-Fabric. Instanziiert für jeden der 4 Ausgangsports ein eigenes `voq_4to1`-Bündel mit zugehörigem `round_robin`-Arbiter und verbindet alle 16 FIFO-Ausgänge über einen gemeinsamen `crossbar_switch`.
+
+**Blockdiagramm:**
+
+```
+          ┌─────────────────────────────────────────────────────────┐
+          │              voq_rr_crossbar_switch_top                 │
+          │                                                         │
+in0 ─────►│─► voq_4to1(out0) ──► RR(0) ──► rd_data_o0_0..3 ─┐    │
+in1 ─────►│─► voq_4to1(out1) ──► RR(1) ──► rd_data_o1_0..3 ─┤    │
+in2 ─────►│─► voq_4to1(out2) ──► RR(2) ──► rd_data_o2_0..3 ─┼──► crossbar ──► out_data_0..3
+in3 ─────►│─► voq_4to1(out3) ──► RR(3) ──► rd_data_o3_0..3 ─┘    │
+          │                                                         │
+          └─────────────────────────────────────────────────────────┘
+```
+
+**Schnittstelle:**
+
+| Signal | Richtung | Beschreibung |
+|---|---|---|
+| `wr_data_inX_outY` / `wr_en_inX_outY` / `wr_eof_inX_outY` | in | 16 getrennte Schreibkanäle (4 Eingänge × 4 Ziele) |
+| `flush_outY` | in | 4-Bit Flush je Output-Queue |
+| `out_data_0..3` | out | Ausgabedaten der 4 Ausgangsports |
+| `out_valid_0..3` | out | Gültigkeitssignal je Ausgangsport |
+| `rr_sel_0..3` / `rr_grant_0..3` / `rr_active_0..3` | out | Debug: RR-Zustand je Ausgangsport |
+| `frame_rdy_dbg_0..3` / `rd_eof_dbg_0..3` / `full_dbg_0..3` / `empty_dbg_0..3` | out | Debug: FIFO-Status je Queue (als 4-Bit-Vektor) |
+
+**EOF-MUX:** Jeder RR-Arbiter benötigt das EOF-Signal des aktuell granteten FIFOs. Da `voq_4to1` alle 4 EOF-Flags parallel ausgibt, wählt ein `with...select`-MUX das richtige anhand von `rr_sel` aus.
+
+**Testbench:** `tb_voq_rr_crossbar_switch_top.vhd` — Tests: Output 0 mit allen 4 Inputs, Output 1 mit Inputs 0 und 2, Output 2 mit Input 3, Output 3 mit Inputs 1 und 2. Output-Monitor gibt Ausgabedaten per `report` ins Transcript aus.
+
+### 5.7 FCS-Block (`fcs_check.vhd`) — Ausstehend
 
 **Funktion:** CRC-32 Berechnung und Frame-Validierung. Enthält einen internen Puffer der den Frame zwischenspeichert während die CRC laufend berechnet wird.
 
@@ -246,7 +280,7 @@ Eingang 0..3 ──► voq_4to1 ──► rd_data_0..3 ──► crossbar_switch
 
 **CRC-32 Polynom:** 0x04C11DB7 (IEEE 802.3 Standard)
 
-### 5.7 MAC-Learning (`mac_table.vhd`) — Ausstehend
+### 5.8 MAC-Learning (`mac_table.vhd`) — Ausstehend
 
 **Funktion:** Lernt Quell-MAC-Adressen und schlägt Ziel-MAC-Adressen in einer Tabelle nach.
 
@@ -318,31 +352,33 @@ Diese Schätzungen sind konservativ. Ein modernes FPGA (z.B. Zynq ZU3EG) hat ca.
 
 ```
 project/
-├── README.md                        ← diese Datei
+├── README.md                              ← diese Datei
 ├── src/
-│   ├── crossbar_switch.vhd          ← 4×4 Crossbar-MUX (fertig)
-│   ├── round_robin.vhd              ← Round-Robin Arbiter (fertig)
-│   ├── voq_fifo.vhd                 ← Generischer VOQ-FIFO, Store-and-Forward (fertig)
-│   ├── voq_4to1.vhd                 ← 4 VOQ-FIFOs für einen Ausgangsport (fertig)
-│   ├── voq_rr_crossbar_top.vhd      ← VOQ+RR+Crossbar Single-Output Top-Level (fertig)
-│   ├── fcs_check.vhd                ← FCS/CRC-32 Block (ausstehend)
-│   ├── mac_table.vhd                ← MAC-Learning (ausstehend)
-│   └── switch_core.vhd              ← Vollständiges 4-Port Top-Level (ausstehend)
+│   ├── crossbar_switch.vhd                ← 4×4 Crossbar-MUX (fertig)
+│   ├── round_robin.vhd                    ← Round-Robin Arbiter (fertig)
+│   ├── voq_fifo.vhd                       ← Generischer VOQ-FIFO, Store-and-Forward (fertig)
+│   ├── voq_4to1.vhd                       ← 4 VOQ-FIFOs für einen Ausgangsport (fertig)
+│   ├── voq_rr_crossbar_top.vhd            ← VOQ+RR+Crossbar Single-Output Top-Level (fertig)
+│   ├── voq_rr_crossbar_switch_top.vhd     ← 4-Port Switch-Fabric: 4×VOQ+RR+Crossbar (fertig)
+│   ├── fcs_check.vhd                      ← FCS/CRC-32 Block (ausstehend)
+│   ├── mac_table.vhd                      ← MAC-Learning (ausstehend)
+│   └── switch_core.vhd                    ← Vollständige Pipeline: FCS+MAC+Fabric (ausstehend)
 ├── tb/
-│   ├── tb_crossbar_switch.vhd       ← Testbench Crossbar (fertig)
-│   ├── tb_round_robin.vhd           ← Testbench Round-Robin (fertig)
-│   ├── tb_round_robin_gpt.vhd       ← Alternative RR-Testbench
-│   ├── tb_round_robin_allreq_gpt.vhd← RR-Fairness-Test: alle Eingänge gleichzeitig
-│   ├── tb_voq_fifo.vhd              ← Testbench VOQ-FIFO (fertig)
-│   ├── tb_voq_fifo_gpt.vhd          ← Alternative VOQ-FIFO-Testbench
-│   ├── tb_voq_rr_crossbar.vhd       ← Testbench VOQ+RR+Crossbar Top-Level (fertig)
-│   ├── tb_fcs_check.vhd             ← Testbench FCS (ausstehend)
-│   ├── tb_mac_table.vhd             ← Testbench MAC (ausstehend)
-│   └── tb_switch_core.vhd           ← Testbench vollständiger Switch (ausstehend)
+│   ├── tb_crossbar_switch.vhd             ← Testbench Crossbar (fertig)
+│   ├── tb_round_robin.vhd                 ← Testbench Round-Robin (fertig)
+│   ├── tb_round_robin_gpt.vhd             ← Alternative RR-Testbench
+│   ├── tb_round_robin_allreq_gpt.vhd      ← RR-Fairness-Test: alle Eingänge gleichzeitig
+│   ├── tb_voq_fifo.vhd                    ← Testbench VOQ-FIFO (fertig)
+│   ├── tb_voq_fifo_gpt.vhd                ← Alternative VOQ-FIFO-Testbench
+│   ├── tb_voq_rr_crossbar.vhd             ← Testbench Single-Output Top-Level (fertig)
+│   ├── tb_voq_rr_crossbar_switch_top.vhd  ← Testbench 4-Port Switch-Fabric (fertig)
+│   ├── tb_fcs_check.vhd                   ← Testbench FCS (ausstehend)
+│   ├── tb_mac_table.vhd                   ← Testbench MAC (ausstehend)
+│   └── tb_switch_core.vhd                 ← Testbench vollständiger Switch (ausstehend)
 └── doc/
-    ├── Architecture_final.pdf       ← Referenz-Paper
-    ├── fpga20pp.pdf                 ← FPGA Switch Paper
-    └── Gigabit_Ethernet_Switch_2.pdf← Aufgabenstellung
+    ├── Architecture_final.pdf             ← Referenz-Paper
+    ├── fpga20pp.pdf                       ← FPGA Switch Paper
+    └── Gigabit_Ethernet_Switch_2.pdf      ← Aufgabenstellung
 ```
 
 ---
@@ -368,7 +404,7 @@ vsim tb_voq_fifo
 run -all
 ```
 
-VOQ+RR+Crossbar Top-Level testen:
+VOQ+RR+Crossbar Single-Output Top-Level testen:
 ```tcl
 vlib work
 vcom src/crossbar_switch.vhd
@@ -378,6 +414,19 @@ vcom src/voq_4to1.vhd
 vcom src/voq_rr_crossbar_top.vhd
 vcom tb/tb_voq_rr_crossbar.vhd
 vsim tb_voq_rr_crossbar
+run -all
+```
+
+4-Port Switch-Fabric testen:
+```tcl
+vlib work
+vcom src/crossbar_switch.vhd
+vcom src/round_robin.vhd
+vcom src/voq_fifo.vhd
+vcom src/voq_4to1.vhd
+vcom src/voq_rr_crossbar_switch_top.vhd
+vcom tb/tb_voq_rr_crossbar_switch_top.vhd
+vsim tb_voq_rr_crossbar_switch_top
 run -all
 ```
 
@@ -395,19 +444,33 @@ ghdl -r tb_voq_rr_crossbar --wave=voq_rr.ghw
 gtkwave voq_rr.ghw
 ```
 
+4-Port Switch-Fabric (GHDL):
+```bash
+ghdl -a src/crossbar_switch.vhd
+ghdl -a src/round_robin.vhd
+ghdl -a src/voq_fifo.vhd
+ghdl -a src/voq_4to1.vhd
+ghdl -a src/voq_rr_crossbar_switch_top.vhd
+ghdl -a tb/tb_voq_rr_crossbar_switch_top.vhd
+ghdl -e tb_voq_rr_crossbar_switch_top
+ghdl -r tb_voq_rr_crossbar_switch_top --wave=voq_rr_switch.ghw
+gtkwave voq_rr_switch.ghw
+```
+
 ---
 
 ## 11. Offene Punkte und nächste Schritte
 
 1. ~~**VOQ-FIFOs implementieren**~~ — Erledigt: `voq_fifo.vhd` + `voq_4to1.vhd`, Store-and-Forward mit frame_rdy, flush, rd_valid
-2. ~~**RR + Crossbar verdrahten**~~ — Erledigt für einen Ausgangsport: `voq_rr_crossbar_top.vhd`
-3. **4-Port Top-Level verdrahten** — 4× `voq_rr_crossbar_top` (oder äquivalente Struktur) in `switch_core.vhd` zusammenstecken
+2. ~~**RR + Crossbar verdrahten (Single-Output)**~~ — Erledigt: `voq_rr_crossbar_top.vhd`
+3. ~~**4-Port Switch-Fabric verdrahten**~~ — Erledigt: `voq_rr_crossbar_switch_top.vhd` — 4× VOQ + 4× RR + Crossbar, inkl. Testbench
 4. **FCS-Block implementieren** — CRC-32 Berechnung mit internem Frame-Puffer
 5. **MAC-Learning implementieren** — Hash-Tabelle mit 8k Einträgen, SMAC/DMAC Verarbeitung
-6. **Integrations-Testbench** — Komplette Frames durch alle 4 Ports schicken
-7. **Broadcast/Unknown-DMAC** — Frame an alle Ausgangsports wenn DMAC unbekannt
-8. **Aging-Mechanismus** — Veraltete MAC-Einträge automatisch löschen
-9. **Timing-Analyse** — Synthese und Place&Route um 125 MHz Timing zu verifizieren
+6. **Vollständiges Top-Level (`switch_core.vhd`)** — FCS + MAC-Learning + Switch-Fabric zusammenstecken
+7. **Integrations-Testbench** — Komplette Ethernet-Frames durch alle 4 Ports mit CRC-Prüfung
+8. **Broadcast/Unknown-DMAC** — Frame an alle Ausgangsports wenn DMAC unbekannt
+9. **Aging-Mechanismus** — Veraltete MAC-Einträge automatisch löschen
+10. **Timing-Analyse** — Synthese und Place&Route um 125 MHz Timing zu verifizieren
 
 ---
 
