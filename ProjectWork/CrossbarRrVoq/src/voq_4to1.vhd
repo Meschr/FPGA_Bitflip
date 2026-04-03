@@ -120,7 +120,7 @@ begin
         port map (
             clk       => clk,
             reset     => reset,
-            flush => flush(0),
+            flush => flush(1),
             wr_en     => wr_en_in1,
             wr_data   => wr_data_in1,
             wr_eof    => wr_eof_in1,
@@ -139,7 +139,7 @@ begin
         port map (
             clk       => clk,
             reset     => reset,
-            flush => flush(0),
+            flush => flush(2),
             wr_en     => wr_en_in2,
             wr_data   => wr_data_in2,
             wr_eof    => wr_eof_in2,
@@ -159,7 +159,7 @@ begin
         port map (
             clk       => clk,
             reset     => reset,
-            flush => flush(0),
+            flush => flush(3),
             wr_en     => wr_en_in3,
             wr_data   => wr_data_in3,
             wr_eof    => wr_eof_in3,
