@@ -44,20 +44,20 @@ entity frame_parser is
     clk        : in  std_logic;
     rst        : in  std_logic;
 
-    -- Byte-Stream Eingang
-    data_in    : in  std_logic_vector(7 downto 0); -- 8-Bit Datenbus
-    data_valid : in  std_logic; -- Signalisiert, dass die Daten auf data_in gültig sind
-    header_done : in  std_logic;  -- Signalisiert, dass der Header vollständig empfangen wurde
-    drop_frame  : in  std_logic;  -- Signalisiert, dass der aktuelle Frame verworfen werden soll
+    -- Byte-stream input
+    data_in    : in  std_logic_vector(7 downto 0); -- 8-bit data bus
+    data_valid : in  std_logic; -- Indicates that the data on data_in is valid
+    header_done : in  std_logic;  -- Indicates that the header has been fully received
+    drop_frame  : in  std_logic;  -- Indicates that the current frame should be dropped
 
-    -- Ausgabe (gültig sobald mac_valid = '1')
-    sof        : out  std_logic;  -- Start of Frame Puls
-    eof        : out  std_logic;  -- End of Frame Puls
-    lof       : out  std_logic;  -- Length of Frame (nur gültig bei EOF)
+    -- Output (valid once mac_valid = '1')
+    sof        : out  std_logic;  -- Start-of-frame pulse
+    eof        : out  std_logic;  -- End-of-frame pulse
+    lof       : out  std_logic;  -- Length of frame (only valid at EOF)
     
-    dst_mac    : out mac_addr_t; -- Ziel-MAC-Adresse
-    src_mac    : out mac_addr_t; -- Quell-MAC-Adresse
-    mac_valid  : out std_logic;   -- Signalisiert, dass die MAC-Adressen gültig sind
+    dst_mac    : out mac_addr_t; -- Destination MAC address
+    src_mac    : out mac_addr_t; -- Source MAC address
+    mac_valid  : out std_logic;   -- Indicates that the MAC addresses are valid
 
     ethertype  : out std_logic_vector(15 downto 0);
   );
@@ -66,7 +66,7 @@ end entity frame_parser;
 architecture rtl of frame_parser is
 
   type state_t is (IDLE, DST_MAC, SRC_MAC, DONE);
-  signal state   : state_t := IDLE;
+  signal state   : state_t := IDLE; -- Current state of the state machine
 
   signal byte_cnt   : integer range 0 to 11 := 0;
   signal dst_buf    : mac_addr_t := (others => '0');
