@@ -100,21 +100,11 @@ begin
     ---------------------------------------------------------------------------
     -- Output-Register (1 Takt Latenz, sauberes Timing)
     ---------------------------------------------------------------------------
-    reg_proc : process(clk)
-    begin
-        if rising_edge(clk) then
-            if reset = '1' then
-                out_data_0 <= (others => '0');
-                out_data_1 <= (others => '0');
-                out_data_2 <= (others => '0');
-                out_data_3 <= (others => '0');
-            else
-                out_data_0 <= mux0_out;
-                out_data_1 <= mux1_out;
-                out_data_2 <= mux2_out;
-                out_data_3 <= mux3_out;
-            end if;
-        end if;
-    end process reg_proc;
+    
+    out_data_0 <= mux0_out;
+    out_data_1 <= mux1_out;
+    out_data_2 <= mux2_out;
+    out_data_3 <= mux3_out;
+
 
 end architecture rtl;
