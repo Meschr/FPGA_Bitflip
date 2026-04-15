@@ -39,6 +39,10 @@ use work.mac_pkg.all;
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+-- Idee: Frame parser bekommt daten von Tx signal 8 bit breit und ein valid signal solange bytes gesendet werden. er extrahiert in zwei vektoren (47 bit) die source mac und dest. mac adresse. die werden witergeben an Mac lernich sobald der FCS check sagt das der check gültig ist. 
+--- Die einzelnen bytes werden an fcs weitergeleitet und eine eof flagg gesetzt wenn das letzte byte weitergeleitet wurde.
+-- zu den daten an fcs wird gleichzeitig start of frame flag gesetzt die länge wird gezählt und auch weitergegeben. 
+
 entity frame_parser is
   port (
     clk        : in  std_logic; --  clock input for synchronizing the frame parsing process
@@ -47,8 +51,8 @@ entity frame_parser is
     -- Byte-stream input
     data_in    : in  std_logic_vector(7 downto 0); -- 8-bit data bus
     data_valid : in  std_logic; -- Indicates that the data on data_in is valid           --> Maybe we don't need this if we can rely on the preamble/SFD to indicate valid data, but it can be useful for timing control and to avoid false triggers during idle periods.
-    header_done : in  std_logic;  -- Indicates that the header has been fully received
-    drop_frame  : in  std_logic;  -- Indicates that the current frame should be dropped   --> From where do we get this signal? Could be an output from the FSC Checker
+    -- header_done : in  std_logic;  -- Indicates that the header has been fully received
+    -- drop_frame  : in  std_logic;  -- Indicates that the current frame should be dropped   --> From where do we get this signal? Could be an output from the FSC Checker
 
     -- Output (valid once mac_valid = '1')
     data_out   : out  std_logic_vector(7 downto 0); -- 8-bit data bus 
@@ -58,8 +62,8 @@ entity frame_parser is
     
     dst_mac    : out mac_addr_t; -- Destination MAC address /subtype mac_addr_t is std_logic_vector(47 downto 0);
     src_mac    : out mac_addr_t; -- Source MAC address
-    mac_valid  : out std_logic;  -- Indicates that the MAC addresses are valid --> How is a MAC address considered valid? Do we need to check for multicast/broadcast addresses or other invalid patterns, or is it sufficient to just indicate that we've successfully parsed the header?
-
+    dst_mac_valid  : out std_logic;  -- Destination MAC is handed to the MAC learning blocl
+    src_mac_valid  : out std_logic;  -- Source MAC is handed to the MAC learning blocl
     ethertype  : out std_logic_vector(15 downto 0) -- EtherType field from the header
   );
 end entity frame_parser;
@@ -110,6 +114,7 @@ begin
         elsif data_valid = '1' then
           case state is
             when IDLE => 
+              -- dont look for pattern but count byte 
               -- Wait for the first byte of the preamble (0x55) to start parsing a new frame.
               if data_in = x"55" then
                 byte_cnt <= 1; -- Count first preamble byte seen in IDLE.
