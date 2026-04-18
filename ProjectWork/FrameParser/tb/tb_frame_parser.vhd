@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_frame_parser_uni is
-end entity tb_frame_parser_uni;
+entity tb_frame_parser is
+end entity tb_frame_parser;
 
-architecture sim of tb_frame_parser_uni is
+architecture sim of tb_frame_parser is
   constant CLK_PERIOD : time := 10 ns;
 
   signal clk             : std_logic := '0';
