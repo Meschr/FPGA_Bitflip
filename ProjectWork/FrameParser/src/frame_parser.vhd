@@ -143,7 +143,7 @@ begin
               end if;                  
 
             when ST_DST =>
-              data_out <= data_in;
+              data_out <= data_in;                        -- set variable for MAC learning "0" we are writing dst_mac now
 
               case byte_cnt is
                 when 0 => dst_buf(47 downto 40) <= data_in;
@@ -163,7 +163,7 @@ begin
                 byte_cnt <= byte_cnt + 1;
               end if;
 
-            when ST_SRC =>
+            when ST_SRC =>                -- set variable for MAC Learning "1" we are writing src_mac now
               data_out <= data_in;
 
               case byte_cnt is
