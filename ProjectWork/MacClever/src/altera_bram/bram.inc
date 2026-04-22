@@ -14,7 +14,7 @@
 --on the Quartus Prime software download page.
 
 
-FUNCTION bram_2 
+FUNCTION bram 
 (
 	address_a[12..0],
 	address_b[12..0],

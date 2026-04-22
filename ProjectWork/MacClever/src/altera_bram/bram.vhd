@@ -4,7 +4,7 @@
 -- MODULE: altsyncram 
 
 -- ============================================================
--- File Name: bram_2.vhd
+-- File Name: bram.vhd
 -- Megafunction Name(s):
 -- 			altsyncram
 --
@@ -40,7 +40,7 @@ USE ieee.std_logic_1164.all;
 LIBRARY altera_mf;
 USE altera_mf.altera_mf_components.all;
 
-ENTITY bram_2 IS
+ENTITY bram IS
 	PORT
 	(
 		address_a		: IN STD_LOGIC_VECTOR (12 DOWNTO 0);
@@ -56,10 +56,10 @@ ENTITY bram_2 IS
 		q_a		: OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
 		q_b		: OUT STD_LOGIC_VECTOR (7 DOWNTO 0)
 	);
-END bram_2;
+END bram;
 
 
-ARCHITECTURE SYN OF bram_2 IS
+ARCHITECTURE SYN OF bram IS
 
 	SIGNAL sub_wire0	: STD_LOGIC_VECTOR (7 DOWNTO 0);
 	SIGNAL sub_wire1	: STD_LOGIC_VECTOR (7 DOWNTO 0);
@@ -229,9 +229,9 @@ END SYN;
 -- Retrieval info: CONNECT: @wren_b 0 0 0 0 wren_b 0 0 0 0
 -- Retrieval info: CONNECT: q_a 0 0 8 0 @q_a 0 0 8 0
 -- Retrieval info: CONNECT: q_b 0 0 8 0 @q_b 0 0 8 0
--- Retrieval info: GEN_FILE: TYPE_NORMAL bram_2.vhd TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL bram_2.inc TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL bram_2.cmp TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL bram_2.bsf TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL bram_2_inst.vhd TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL bram.vhd TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL bram.inc TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL bram.cmp TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL bram.bsf TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL bram_inst.vhd TRUE
 -- Retrieval info: LIB_FILE: altera_mf

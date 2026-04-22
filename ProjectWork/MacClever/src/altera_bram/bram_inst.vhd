@@ -1,4 +1,4 @@
-bram_2_inst : bram_2 PORT MAP (
+bram_inst : bram PORT MAP (
 		address_a	 => address_a_sig,
 		address_b	 => address_b_sig,
 		clock	 => clock_sig,
