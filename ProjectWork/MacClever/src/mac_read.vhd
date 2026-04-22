@@ -1,10 +1,10 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
--- This component should implement the orchestration of the round robin logic 
--- behind reading with 4 different requuesting entities (4 ports).
+-- This component implements the orchestration of the round robin logic 
+-- behind reading with 4 different requesting entities (4 ports) from the mac table.
 -- Each port can request a read, and when it is the port's turn, the  requested 
--- destination is the output, with a valid signal. The valid signal is only asserted 
+-- destination is output, together with a valid signal. The valid signal is only asserted 
 -- if the counter stored in the first DATA_WIDTH-2 bits of the memory word is NOT 0. 
 -- If there is no valid destination present at the output of this entity, the packet 
 -- should be flooded to all output ports.
@@ -24,8 +24,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity mac_read is
     generic (
-        ADDR_WIDTH : positive := 10; -- address size
-        DATA_WIDTH : positive := 8
+        ADDR_WIDTH : positive := 13; -- address size
+        DATA_WIDTH : positive := 8   -- bram depth
     );
     port (
 
@@ -34,13 +34,13 @@ entity mac_read is
         rst    : in  std_logic;
     
         -- Eingaben
-        addr0  : in  std_logic_vector(12 downto 0);
+        addr0  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
         req0   : in  std_logic;
-        addr1  : in  std_logic_vector(12 downto 0);
+        addr1  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
         req1   : in  std_logic;
-        addr2  : in  std_logic_vector(12 downto 0);
+        addr2  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
         req2   : in  std_logic;
-        addr3  : in  std_logic_vector(12 downto 0);
+        addr3  : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
         req3   : in  std_logic;
 
         -- Ausgaben
