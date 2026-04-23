@@ -76,7 +76,7 @@ BEGIN
 		clock_enable_output_a => "NORMAL",
 		clock_enable_output_b => "NORMAL",
 		indata_reg_b => "CLOCK0",
-		intended_device_family => "Cyclone V",
+		intended_device_family => "Stratix IV",
 		lpm_type => "altsyncram",
 		numwords_a => 8192,
 		numwords_b => 8192,
@@ -145,7 +145,7 @@ END SYN;
 -- Retrieval info: PRIVATE: INDATA_REG_B NUMERIC "1"
 -- Retrieval info: PRIVATE: INIT_FILE_LAYOUT STRING "PORT_A"
 -- Retrieval info: PRIVATE: INIT_TO_SIM_X NUMERIC "1"
--- Retrieval info: PRIVATE: INTENDED_DEVICE_FAMILY STRING "Cyclone V"
+-- Retrieval info: PRIVATE: INTENDED_DEVICE_FAMILY STRING "Stratix IV"
 -- Retrieval info: PRIVATE: JTAG_ENABLED NUMERIC "0"
 -- Retrieval info: PRIVATE: JTAG_ID STRING "NONE"
 -- Retrieval info: PRIVATE: MAXIMUM_DEPTH NUMERIC "0"
@@ -185,7 +185,7 @@ END SYN;
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_A STRING "NORMAL"
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_B STRING "NORMAL"
 -- Retrieval info: CONSTANT: INDATA_REG_B STRING "CLOCK0"
--- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone V"
+-- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Stratix IV"
 -- Retrieval info: CONSTANT: LPM_TYPE STRING "altsyncram"
 -- Retrieval info: CONSTANT: NUMWORDS_A NUMERIC "8192"
 -- Retrieval info: CONSTANT: NUMWORDS_B NUMERIC "8192"

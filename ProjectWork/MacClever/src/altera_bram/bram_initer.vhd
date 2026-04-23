@@ -34,7 +34,7 @@
 --on the Quartus Prime software download page.
 
 
---altmem_init CBX_AUTO_BLACKBOX="ALL" DEVICE_FAMILY="Cyclone V" INIT_TO_ZERO="YES" NUMWORDS=8192 PORT_ROM_DATA_READY="PORT_UNUSED" ROM_READ_LATENCY=1 WIDTH=8 WIDTHAD=13 clock dataout init init_busy ram_address ram_wren
+--altmem_init CBX_AUTO_BLACKBOX="ALL" DEVICE_FAMILY="Stratix IV" INIT_TO_ZERO="YES" NUMWORDS=8192 PORT_ROM_DATA_READY="PORT_UNUSED" ROM_READ_LATENCY=1 WIDTH=8 WIDTHAD=13 clock dataout init init_busy ram_address ram_wren
 --VERSION_BEGIN 25.1 cbx_altera_syncram_nd_impl 2025:10:22:10:31:18:SC cbx_altmem_init 2025:10:22:10:31:18:SC cbx_altsyncram 2025:10:22:10:31:18:SC cbx_cycloneii 2025:10:22:10:31:18:SC cbx_lpm_add_sub 2025:10:22:10:31:18:SC cbx_lpm_compare 2025:10:22:10:31:18:SC cbx_lpm_counter 2025:10:22:10:31:18:SC cbx_lpm_decode 2025:10:22:10:31:18:SC cbx_lpm_mux 2025:10:22:10:31:18:SC cbx_mgl 2025:10:22:10:38:57:SC cbx_nadder 2025:10:22:10:31:18:SC cbx_stratix 2025:10:22:10:31:18:SC cbx_stratixii 2025:10:22:10:31:18:SC cbx_stratixiii 2025:10:22:10:31:18:SC cbx_stratixv 2025:10:22:10:31:18:SC cbx_util_mgl 2025:10:22:10:31:18:SC  VERSION_END
 
  LIBRARY lpm;
@@ -353,10 +353,10 @@ END RTL;
 -- CNX file retrieval info
 -- ============================================================
 -- Retrieval info: LIBRARY: altera_mf altera_mf.altera_mf_components.all
--- Retrieval info: PRIVATE: INTENDED_DEVICE_FAMILY STRING "Cyclone V"
+-- Retrieval info: PRIVATE: INTENDED_DEVICE_FAMILY STRING "Stratix IV"
 -- Retrieval info: CONSTANT: INIT_FILE STRING "UNUSED"
 -- Retrieval info: CONSTANT: INIT_TO_ZERO STRING "YES"
--- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone V"
+-- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Stratix IV"
 -- Retrieval info: CONSTANT: LPM_HINT STRING "UNUSED"
 -- Retrieval info: CONSTANT: LPM_TYPE STRING "altmem_init"
 -- Retrieval info: CONSTANT: NUMWORDS NUMERIC "8192"
