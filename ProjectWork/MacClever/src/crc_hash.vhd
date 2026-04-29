@@ -54,7 +54,6 @@ begin
                         state       <= RUN;
                         -- Neue MAC-Adresse laden und Berechnung starten
                         mac_reg     <= mac_in;
-                        
                         ready       <= '0';
 
                     end if;

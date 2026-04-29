@@ -21,7 +21,7 @@ use ieee.numeric_std.all;
 -- Ports:
 -- in  :
 --     addrx  : the hash of the mac address requested, 16 bit crc, least signifiant ADDR_WIDTH bits as address
---     reqx   : requesting a read. assert at the same time as giving the address
+--     reqx   : requesting a read. assert at the same time as giving the address (already registered in source entity)
 --     validx : the fcs check was passed, the write action can be commited. 
 
 entity mac_read is
@@ -65,7 +65,8 @@ end mac_read;
 architecture rtl of mac_read is
     signal ack0, ack1, ack2, ack3, ackcnt                     : std_logic;
     signal reqcnt                                             : std_logic;
-    signal req0_reg, req1_reg, req2_reg, req3_reg, reqcnt_reg : std_logic;
+    signal valid0_reg, valid1_reg, valid2_reg, valid3_reg     : std_logic;
+    signal reqcnt_reg                                         : std_logic;
     signal forget_rate_limit                                  : unsigned(FORGET_CNT - 1 downto 0);
     signal expiry_addr                                        : std_logic_vector(ADDR_WIDTH - 1 downto 0);
 
@@ -105,7 +106,7 @@ begin
         end if;
     end process expiry_addr_counter;
 
-    round_robin_comb : process(round_robin, req0_reg, req1_reg, req2_reg, req3_reg, reqcnt_reg, addr0, addr1, addr2, addr3, expiry_addr, rdata)
+    round_robin_comb : process(round_robin, req0, req1, req2, req3, reqcnt_reg, valid0_reg, valid1_reg, valid2_reg, valid3_reg, addr0, addr1, addr2, addr3, expiry_addr, rdata)
     begin
         round_robin_next <= ZERO;
         addr_next        <= (others => '0');
@@ -121,7 +122,7 @@ begin
         case( round_robin ) is
             when ZERO =>
                 round_robin_next <= ONE;
-                if req0_reg then
+                if req0 and valid0_reg then
                     addr_next  <= addr0;
                     wen_next   <= '1';
                     wdata_next <= "11111100";
@@ -129,7 +130,7 @@ begin
                 end if;
             when ONE =>
                 round_robin_next <= TWO;
-                if req1_reg then
+                if req1 and valid1_reg then
                     addr_next  <= addr1;
                     wen_next   <= '1';
                     wdata_next <= "11111101";
@@ -137,7 +138,7 @@ begin
                 end if;
             when TWO =>
                 round_robin_next <= THREE;
-                if req2_reg then
+                if req2 and valid2_reg then
                     addr_next  <= addr2;
                     wen_next   <= '1';
                     wdata_next <= "11111110";
@@ -145,7 +146,7 @@ begin
                 end if;
             when THREE =>
                 round_robin_next <= COUNTER_R;
-                if req0_reg then
+                if req3 and valid3_reg then
                     addr_next  <= addr3;
                     wen_next   <= '1';
                     wdata_next <= "11111111";
@@ -163,11 +164,11 @@ begin
                 round_robin_next <= COUNTER_W;
             when COUNTER_W =>
                 round_robin_next <= ZERO;
-                if not rdata = (DATA_WIDTH - 1 downto 0 => '0') then
+                ackcnt     <= '1';
+                if not rdata(DATA_WIDTH - 1 downto 2) = (DATA_WIDTH - 1 downto 2 => '0') then
                     addr_next  <= expiry_addr;
                     wen_next   <= '1';
                     wdata_next <= std_logic_vector(unsigned(rdata) - 1);
-                    ackcnt     <= '1';
                 end if;
         end case;
     end process round_robin_comb;
@@ -189,43 +190,56 @@ begin
         end if;
     end process round_robin_seq;
 
-    req_buffers : process(clk, rst, req0, req1, req2, req3, reqcnt, req0_reg, req1_reg, req2_reg, req3_reg, reqcnt_reg, ack0, ack1, ack2, ack3, ackcnt)
+    buffers : process(clk, rst, valid0, valid1, valid2, valid3, reqcnt, ack0, ack1, ack2, ack3, ackcnt)
     begin
         if rst = '0' then
-            req0_reg   <= '0';
-            req1_reg   <= '0';
-            req2_reg   <= '0';
-            req3_reg   <= '0';
+            valid0_reg <= '0';
+            valid1_reg <= '0';
+            valid2_reg <= '0';
+            valid3_reg <= '0';
             reqcnt_reg <= '0';
         elsif rising_edge(clk) then
+            -- Valid signal registration: set by input, cleared by ack
             if ack0 = '1' then
-                req0_reg <= '0';
-            elsif req0 = '1' then
-                req0_reg <= '1';
+                valid0_reg <= '0';
+            elsif valid0 = '1' then
+                valid0_reg <= '1';
             else
-                req0_reg <= req0_reg;
+                valid0_reg <= valid0_reg;
             end if;
+            
             if ack1 = '1' then
-                req1_reg <= '0';
-            elsif req1 = '1' then
-                req1_reg <= '1';
+                valid1_reg <= '0';
+            elsif valid1 = '1' then
+                valid1_reg <= '1';
             else
-                req1_reg <= req1_reg;
+                valid1_reg <= valid1_reg;
             end if;
+            
             if ack2 = '1' then
-                req2_reg <= '0';
-            elsif req2 = '1' then
-                req2_reg <= '1';
+                valid2_reg <= '0';
+            elsif valid2 = '1' then
+                valid2_reg <= '1';
             else
-                req2_reg <= req2_reg;
+                valid2_reg <= valid2_reg;
             end if;
+            
             if ack3 = '1' then
-                req3_reg <= '0';
-            elsif req3 = '1' then
-                req3_reg <= '1';
+                valid3_reg <= '0';
+            elsif valid3 = '1' then
+                valid3_reg <= '1';
             else
-                req3_reg <= req3_reg;
+                valid3_reg <= valid3_reg;
+            end if;
+            
+            -- Reqcnt registration (unchanged)
+            if ackcnt = '1' then
+                reqcnt_reg <= '0';
+            elsif reqcnt = '1' then
+                reqcnt_reg <= '1';
+            else
+                reqcnt_reg <= reqcnt_reg;
             end if;
         end if;
-    end process req_buffers;
+    end process buffers;
 end rtl;
