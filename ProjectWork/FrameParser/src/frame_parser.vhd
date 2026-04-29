@@ -64,7 +64,7 @@ entity frame_parser is
 end entity frame_parser;
 
 architecture rtl of frame_parser is
-  type state_t is (IDLE, ST_Preamble, ST_SFD, ST_DST, ST_SRC, ST_ETHER, ST_PAYLOAD, ST_FCS);  -- State machine states for parsing the Ethernet frame
+  type state_t is (IDLE, ST_Preamble, ST_SFD, ST_DST, ST_SRC, ST_ETHER, ST_PAYLOAD_FCS);  -- State machine states for parsing the Ethernet frame
   signal state      : state_t := IDLE;                                                        -- State variable to track the current stage of frame parsing
 
   signal dst_buf    : std_logic_vector(47 downto 0) := (others => '0');                       -- Buffer to hold the incoming bytes for the destination MAC address until fully received
@@ -73,6 +73,7 @@ architecture rtl of frame_parser is
   signal byte_cnt   : integer range 0 to 1500 := 0;                                           -- Shared byte counter (uses up to 6 during preamble detection)
   signal payload_length : integer range 0 to 1500 := 0;                                       -- Extracted payload length from length/ethertype field
   signal ethertype  : std_logic_vector(15 downto 0) := (others => '0');                       -- EtherType field from the header https://en.wikipedia.org/wiki/EtherType
+  signal data_valid_prev : std_logic := '0';                                                   -- Previous data_valid value for falling-edge detection
 
 begin
 
@@ -86,6 +87,7 @@ begin
         ether_byte_0 <= (others => '0');
         payload_length <= 0;
         byte_cnt   <= 0;
+        data_valid_prev <= '0';
 
         data_out   <= (others => '0');
         sof        <= '0';
@@ -102,37 +104,43 @@ begin
         macs_valid <= '0';
         lof <= '0';
 
-        if data_valid = '1' then
+        -- Detect end-of-frame from data_valid falling edge.
+        -- This pulse occurs one cycle after the last valid byte.
+        if (data_valid_prev = '1') and (data_valid = '0') and (state = ST_PAYLOAD_FCS) then
+          eof <= '1';
+          state <= IDLE;
+          byte_cnt <= 0;
+        elsif data_valid = '1' then
           case state is
-            when IDLE =>                                -- dont look for pattern but count byte               
+            when IDLE =>                                -- dont look for pattern but count byte
               state <= ST_Preamble;
               byte_cnt <= 1;                            -- Start counting bytes for preamble detection
-              
-            when ST_preamble =>                         -- Expecting 7 bytes of preamble (0x55). After receiving 7 bytes, expect SFD (0xD5).
-                if byte_cnt = 6 then                    -- Seventh preamble byte received, next byte must be SFD.  
 
-                  state    <= ST_SFD;
-                  byte_cnt <= 0;                        -- Reset byte count for SFD detection
-                else
-                  byte_cnt <= byte_cnt + 1;
-                end if;
+            when ST_Preamble =>                         -- Expecting 7 bytes of preamble (0x55). After receiving 7 bytes, expect SFD (0xD5).
+              if byte_cnt = 6 then                      -- Seventh preamble byte received, next byte must be SFD.
+                state    <= ST_SFD;
+                byte_cnt <= 0;                          -- Reset byte count for SFD detection
+              else
+                byte_cnt <= byte_cnt + 1;
+              end if;
 
             when ST_SFD =>                              -- Expecting the Start of Frame Delimiter (SFD) which should be 0xD5.
               if data_in = x"D5" then
-                sof <= '1'; 
-
                 state     <= ST_DST;
-                byte_cnt  <= 0;                         -- Reset byte count for destination MAC address reception 
+                byte_cnt  <= 0;                         -- Reset byte count for destination MAC address reception
               else                                      -- If we receive a byte that is not 0xD5, reset to IDLE.
                 state <= IDLE;
                 byte_cnt <= 0;
-              end if;                  
+              end if;
 
             when ST_DST =>
               data_out <= data_in;                      -- from here on we write to the FCS checker
+              if byte_cnt = 0 then
+                sof <= '1';                             -- Align SOF with first byte forwarded to CRC checker
+              end if;
 
               case byte_cnt is
-                when 0 => dst_buf(47 downto 40) <= data_in;                          
+                when 0 => dst_buf(47 downto 40) <= data_in;
                 when 1 => dst_buf(39 downto 32) <= data_in;
                 when 2 => dst_buf(31 downto 24) <= data_in;
                 when 3 => dst_buf(23 downto 16) <= data_in;
@@ -151,7 +159,7 @@ begin
             when ST_SRC =>                                  -- set variable for MAC Learning "1" we are writing src_mac now
               data_out <= data_in;
 
-              case byte_cnt is 
+              case byte_cnt is
                 when 0 => src_buf(47 downto 40) <= data_in;
                 when 1 => src_buf(39 downto 32) <= data_in;
                 when 2 => src_buf(31 downto 24) <= data_in;
@@ -168,15 +176,15 @@ begin
                 byte_cnt <= 0;
               end if;
 
-            when ST_ETHER => 
+            when ST_ETHER =>
               data_out <= data_in;
 
               if byte_cnt = 0 then
                 ether_byte_0 <= data_in;
                 byte_cnt <= 1;
-              else              
+              else
                 ethertype  <= ether_byte_0 & data_in;
-                
+
                 -- Extract payload length from ethertype field: if <= 1500, it's the length; otherwise use 1500 as default
                 if unsigned(ether_byte_0 & data_in) <= 1500 then
                   payload_length <= to_integer(unsigned(ether_byte_0 & data_in));
@@ -186,38 +194,23 @@ begin
 
                 lof        <= '1';
                 macs_valid <= '1';                        -- Assert macs_valid pulse when both dst_mac and src_mac are valid and can be used for MAC learning.
-                dst_mac    <= dst_buf;                
+                dst_mac    <= dst_buf;
                 src_mac    <= src_buf;
 
-                state      <= ST_PAYLOAD;
+                state      <= ST_PAYLOAD_FCS;
                 byte_cnt   <= 0;
               end if;
 
-            when ST_PAYLOAD =>
-              -- Forward the payload and FCS bytes until data_valid drops.
+            when ST_PAYLOAD_FCS =>
+              -- Forward bytes while data_valid is high.
               data_out <= data_in;
-
-              if byte_cnt = payload_length - 1 then
-                eof <= '1'; -- Assert end-of-frame pulse on the last byte of the payload.
-
-                state <= ST_FCS; -- Transition to FCS state after expected payload length is received.
-                byte_cnt <= 0; -- Reset byte count for FCS reception
-              else
-                byte_cnt <= byte_cnt + 1;
-              end if;
-              
-            when ST_FCS =>
-              -- Keep forwarding bytes while waiting for end-of-frame.
-              data_out <= data_in;
-
-              byte_cnt <= byte_cnt + 1; 
-              if byte_cnt = 3 then
-                state <= IDLE; -- Reset to IDLE after processing the frame
-                byte_cnt <= 0; -- Reset byte count for next frame
-              end if;
+              byte_cnt <= byte_cnt + 1;
 
           end case;
-        end if; -- if data_valid
+        end if;
+
+        data_valid_prev <= data_valid;
+        
       end if; -- if reset
     end if; -- if rising_edge
   end process;

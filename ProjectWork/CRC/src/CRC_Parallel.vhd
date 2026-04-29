@@ -19,16 +19,14 @@ architecture rtl of CRC_Parallel is
 
   signal crc_reg   : std_logic_vector(31 downto 0) := (others => '0');
   signal crc_next  : std_logic_vector(31 downto 0);
-
   signal checking  : std_logic := '0';
   signal in_fcs    : std_logic := '0';
-  signal fcs_cnt   : unsigned(5 downto 0) := (others => '0');
   signal head_cnt  : unsigned(5 downto 0) := (others => '0');
 
   -- NEW: base crc used for combinational calculation (allows SOF bit to be processed)
   --signal crc_base  : std_logic_vector(31 downto 0);
 
-  -- NEW: bit is valid when we're inside a frame OR starting a new one
+
   signal bit_valid : std_logic;
 
 begin
@@ -51,8 +49,6 @@ begin
 	  -- keep your existing inversion policy
 	  if (head_cnt < 4) then
 		 din_eff := not data_in;
-	  --elsif (in_fcs = '1') or (end_of_frame = '1') then
-		-- din_eff := not data_in;
 	  else
 		 din_eff := data_in;
 	  end if;
@@ -84,7 +80,6 @@ end process;
       crc_reg   <= (others => '0');
       checking  <= '0';
       in_fcs    <= '0';
-      fcs_cnt   <= (others => '0');
       fcs_error <= '0';
       head_cnt  <= (others => '0');
 
@@ -94,7 +89,6 @@ end process;
       if start_of_frame = '1' then
         checking  <= '1';
         in_fcs    <= '0';
-        fcs_cnt   <= (others => '0');
         fcs_error <= '0';
         head_cnt  <= (others => '0');
       end if;
@@ -107,25 +101,20 @@ end process;
         if head_cnt < 4 then
           head_cnt <= head_cnt + 1;
         end if;
-                -- FCS starts NOW (same cycle as first FCS bit)
-        if end_of_frame = '1' then
-          in_fcs  <= '1';
-          fcs_cnt <= to_unsigned(1, fcs_cnt'length);  -- we've just processed FCS bit #0
-        end if;
 
         -- count FCS bits and decide after 32 bits total
         if end_of_frame = '1' then          
             -- after processing 32nd FCS bit (bit #31)
-          if crc_next = x"C704DD7B" then
+          if crc_next = x"C704DD7B" then -- new checksum at the very end without inverting last 4 bytes
               fcs_error <= '0';
+              
           else
               fcs_error <= '1';
+              
           end if;
 
             checking <= '0';
-            in_fcs   <= '0';
-          else
-            fcs_cnt <= fcs_cnt + 1;
+            crc_reg   <= (others => '0');
           end if;
         
       end if;

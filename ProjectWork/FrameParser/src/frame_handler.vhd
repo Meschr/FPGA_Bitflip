@@ -37,7 +37,7 @@ architecture rtl of frame_handler is
     signal eof         : std_logic := '0'; -- End of Frame
     signal lof_s       : std_logic := '0';
     signal data        : std_logic_vector(7 downto 0);
-    signal crc_check : std_logic;
+    signal fcs_ok      : std_logic := '0';
 begin
 
     u_frameparser : entity work.frame_parser
@@ -63,9 +63,8 @@ begin
         start_of_frame => sof,
         end_of_frame   => eof,
         data_in        => data,
-        fcs_error      => crc_check
+        fcs_error      => crc_valid,
+        fcs_ok         => fcs_ok
     );
-        crc_valid <= not crc_check; -- Invert fcs_error to get crc_valid
-     
 
 end architecture;

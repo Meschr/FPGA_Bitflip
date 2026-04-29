@@ -86,8 +86,8 @@ architecture sim of tb_fcs_check_parallel is
         start_of_frame <= '0';
       end if;
 
-      -- end_of_frame on first FCS byte (byte index = last-3)
-      if i = (pkt'high - 3) then
+      -- end_of_frame on last Byte of the whole frame 
+      if i = (pkt'high) then
         end_of_frame <= '1';
       else
         end_of_frame <= '0';

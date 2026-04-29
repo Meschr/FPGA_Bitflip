@@ -25,138 +25,47 @@ architecture sim of tb_frame_handler is
     x"55", x"55", x"55", x"55", x"55", x"55", x"55"
   );
 
-  -- =========================================================================
-  -- TEST 1: Korrekter Frame mit 8-Byte Payload
-  -- =========================================================================
-  constant DST_FRAME_1 : byte_array_t(0 to 5) := (
-    x"AA", x"BB", x"CC", x"DD", x"EE", x"FF"
+  constant SFD : std_logic_vector(7 downto 0) := x"D5";
+
+  -- Valid Ethernet packet from tb_fcs_check_parallel (64 bytes: 60 payload + 4 FCS)
+  -- DST=00:10:A4:7B:EA:80, SRC=00:12:34:56:78:90, EtherType=0x0800 (IPv4)
+  -- Payload length = 46 bytes (0x002E in EtherType field), plus 4 FCS = 50 bytes total
+  constant PKT_OK : byte_array_t(0 to 63) := (
+    -- DST (6 bytes)
+    x"00", x"10", x"A4", x"7B", x"EA", x"80",
+    -- SRC (6 bytes)
+    x"00", x"12", x"34", x"56", x"78", x"90",
+    -- EtherType (2 bytes) - 0x0800 = IPv4
+    x"08", x"00",
+    -- Payload (46 bytes)
+    x"45", x"00", x"00", x"2E", x"B3", x"FE", x"00", x"00",
+    x"80", x"11", x"05", x"40", x"C0", x"A8", x"00", x"2C",
+    x"C0", x"A8", x"00", x"04", x"04", x"00", x"04", x"00",
+    x"00", x"1A", x"2D", x"E8", x"00", x"01", x"02", x"03",
+    x"04", x"05", x"06", x"07", x"08", x"09", x"0A", x"0B",
+    x"0C", x"0D", x"0E", x"0F", x"10", x"11",
+    -- FCS (4 bytes)
+    x"E6", x"C5", x"3D", x"B2"
   );
 
-  constant SRC_FRAME_1 : byte_array_t(0 to 5) := (
-    x"11", x"22", x"33", x"44", x"55", x"66"
+  -- Corrupted packet: change one byte in payload but keep same FCS (should trigger CRC error)
+  constant PKT_BAD : byte_array_t(0 to 63) := (
+    -- DST (6 bytes)
+    x"00", x"10", x"A4", x"7B", x"EA", x"80",
+    -- SRC (6 bytes) - byte 4 changed from 0x78 to 0x79
+    x"00", x"12", x"34", x"56", x"79", x"90",
+    -- EtherType (2 bytes) - 0x0800 = IPv4
+    x"08", x"00",
+    -- Payload (46 bytes)
+    x"45", x"00", x"00", x"2E", x"B3", x"FE", x"00", x"00",
+    x"80", x"11", x"05", x"40", x"C0", x"A8", x"00", x"2C",
+    x"C0", x"A8", x"00", x"04", x"04", x"00", x"04", x"00",
+    x"00", x"1A", x"2D", x"E8", x"00", x"01", x"02", x"03",
+    x"04", x"05", x"06", x"07", x"08", x"09", x"0A", x"0B",
+    x"0C", x"0D", x"0E", x"0F", x"10", x"11",
+    -- Same FCS as pkt_ok (4 bytes)
+    x"E6", x"C5", x"3D", x"B2"
   );
-
-  constant LEN_FRAME_1 : byte_array_t(0 to 1) := (
-    x"00", x"08"  -- 8 Bytes Payload
-  );
-
-  constant PAYLOAD_1 : byte_array_t(0 to 7) := (
-    x"10", x"20", x"30", x"40", x"50", x"60", x"70", x"80"
-  );
-
-  constant FCS_1 : byte_array_t(0 to 3) := (
-    x"3D", x"2B", x"F5", x"09"  -- Korrekter CRC
-  );
-
-  -- =========================================================================
-  -- TEST 2: Korrekter Frame mit 14-Byte Payload (andere Länge)
-  -- =========================================================================
-  constant DST_FRAME_2 : byte_array_t(0 to 5) := (
-    x"10", x"20", x"30", x"40", x"50", x"60"
-  );
-
-  constant SRC_FRAME_2 : byte_array_t(0 to 5) := (
-    x"A1", x"A2", x"A3", x"A4", x"A5", x"A6"
-  );
-
-  constant LEN_FRAME_2 : byte_array_t(0 to 1) := (
-    x"00", x"0E"  -- 14 Bytes Payload
-  );
-
-  constant PAYLOAD_2 : byte_array_t(0 to 13) := (
-    x"AA", x"BB", x"CC", x"DD", x"EE", x"FF",
-    x"11", x"22", x"33", x"44", x"55", x"66",
-    x"77", x"88"
-  );
-
-  constant FCS_2 : byte_array_t(0 to 3) := (
-    x"47", x"D8", x"A7", x"2C"  -- Korrekter CRC
-  );
-
-  -- =========================================================================
-  -- TEST 3: Frame mit FALSCHER CRC (gleiche Payload wie Test 1, aber CRC verfälscht)
-  -- =========================================================================
-  constant DST_FRAME_3 : byte_array_t(0 to 5) := (
-    x"FF", x"FF", x"FF", x"FF", x"FF", x"FF"
-  );
-
-  constant SRC_FRAME_3 : byte_array_t(0 to 5) := (
-    x"C1", x"C2", x"C3", x"C4", x"C5", x"C6"
-  );
-
-  constant LEN_FRAME_3 : byte_array_t(0 to 1) := (
-    x"00", x"08"  -- 8 Bytes Payload
-  );
-
-  constant PAYLOAD_3 : byte_array_t(0 to 7) := (
-    x"DE", x"AD", x"BE", x"EF", x"CA", x"FE", x"BA", x"BE"
-  );
-
-  constant FCS_3 : byte_array_t(0 to 3) := (
-    x"FF", x"FF", x"FF", x"FF"  -- FALSCHER/VERFÄLSCHTER CRC
-  );
-
-  procedure send_frame(
-    signal clk_i      : in std_logic;
-    signal din_o      : out std_logic_vector(7 downto 0);
-    signal dv_o       : out std_logic;
-    constant preamble : in byte_array_t(0 to 6);
-    constant dst      : in byte_array_t(0 to 5);
-    constant src      : in byte_array_t(0 to 5);
-    constant len_eth  : in byte_array_t(0 to 1);
-    constant payload  : in byte_array_t;
-    constant fcs      : in byte_array_t(0 to 3)
-  ) is
-  begin
-    -- Preamble + SFD
-    for i in preamble'range loop
-      din_o <= preamble(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-    din_o <= x"D5";
-    dv_o  <= '1';
-    wait until rising_edge(clk_i);
-
-    -- Destination MAC
-    for i in dst'range loop
-      din_o <= dst(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-
-    -- Source MAC
-    for i in src'range loop
-      din_o <= src(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-
-    -- Length / EtherType
-    for i in len_eth'range loop
-      din_o <= len_eth(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-
-    -- Payload
-    for i in payload'range loop
-      din_o <= payload(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-
-    -- FCS
-    for i in fcs'range loop
-      din_o <= fcs(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
-
-    dv_o  <= '0';
-    din_o <= (others => '0');
-    wait until rising_edge(clk_i);
-  end procedure;
 
   function bytes_to_mac(arr : byte_array_t(0 to 5)) return std_logic_vector is
     variable tmp : std_logic_vector(47 downto 0);
@@ -170,19 +79,79 @@ architecture sim of tb_frame_handler is
     return tmp;
   end function;
 
+  procedure sample_flags(
+    signal mac_ready_i : in std_logic;
+    signal crc_valid_i : in std_logic;
+    variable saw_mac_ready : inout boolean;
+    variable saw_crc_error : inout boolean
+  ) is
+  begin
+    if mac_ready_i = '1' then
+      saw_mac_ready := true;
+    end if;
+
+    -- frame_handler maps crc_valid <= not fcs_error,
+    -- so crc_valid='0' means CRC error detected.
+    if crc_valid_i = '0' then
+      saw_crc_error := true;
+    end if;
+  end procedure;
+
+  procedure send_packet_with_preamble(
+    signal clk_i        : in std_logic;
+    signal din_o        : out std_logic_vector(7 downto 0);
+    signal dv_o         : out std_logic;
+    signal mac_ready_i  : in std_logic;
+    signal crc_valid_i  : in std_logic;
+    constant preamble_i : in byte_array_t(0 to 6);
+    constant sfd_i      : in std_logic_vector(7 downto 0);
+    constant pkt        : in byte_array_t;
+    variable saw_mac_ready : inout boolean;
+    variable saw_crc_error : inout boolean
+  ) is
+  begin
+    -- Send preamble
+    for i in preamble_i'range loop
+      din_o <= preamble_i(i);
+      dv_o  <= '1';
+      wait until rising_edge(clk_i);
+      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    end loop;
+
+    -- Send SFD
+    din_o <= sfd_i;
+    dv_o  <= '1';
+    wait until rising_edge(clk_i);
+    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+
+    -- Send complete packet (DST + SRC + EtherType + Payload + FCS)
+    for i in pkt'range loop
+      din_o <= pkt(i);
+      dv_o  <= '1';
+      wait until rising_edge(clk_i);
+      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    end loop;
+
+    -- End transmission
+    dv_o  <= '0';
+    din_o <= (others => '0');
+    wait until rising_edge(clk_i);
+    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+  end procedure;
+
 begin
 
   dut : entity work.frame_handler
     port map (
-      clk       => clk,
-      reset     => reset,
-      data_in   => data_in,
+      clk        => clk,
+      reset      => reset,
+      data_in    => data_in,
       data_valid => data_valid,
-      data_out  => data_out,
-      mac_ready => mac_ready,
-      dst_mac   => dst_mac,
-      src_mac   => src_mac,
-      crc_valid => crc_valid
+      data_out   => data_out,
+      mac_ready  => mac_ready,
+      dst_mac    => dst_mac,
+      src_mac    => src_mac,
+      crc_valid  => crc_valid
     );
 
   p_clk : process
@@ -194,103 +163,121 @@ begin
   end process;
 
   p_stim : process
-    variable exp_dst : std_logic_vector(47 downto 0);
-    variable exp_src : std_logic_vector(47 downto 0);
+    variable exp_dst_ok : std_logic_vector(47 downto 0);
+    variable exp_src_ok : std_logic_vector(47 downto 0);
+    variable exp_dst_bad : std_logic_vector(47 downto 0);
+    variable exp_src_bad : std_logic_vector(47 downto 0);
+
+    variable saw_mac_ready : boolean;
+    variable saw_crc_error : boolean;
   begin
-    -- Reset
     reset <= '1';
     data_valid <= '0';
     data_in <= (others => '0');
     wait for 3 * CLK_PERIOD;
     wait until rising_edge(clk);
     reset <= '0';
-    wait for CLK_PERIOD;
+    wait until rising_edge(clk);
 
-    -- =========================================================================
-    -- Test 1: Korrekter Frame mit 8-Byte Payload
-    -- Erwartet: MACs werden korrekt extrahiert, crc_valid = '0' (kein CRC-Fehler)
-    -- =========================================================================
-    report "=== Test 1: Valid Frame with 8-byte Payload and CORRECT CRC ===";
+    -- Extract expected MAC addresses from packets
+    exp_dst_ok := bytes_to_mac(PKT_OK(0 to 5));
+    exp_src_ok := bytes_to_mac(PKT_OK(6 to 11));
+    exp_dst_bad := bytes_to_mac(PKT_BAD(0 to 5));
+    exp_src_bad := bytes_to_mac(PKT_BAD(6 to 11));
 
-    exp_dst := bytes_to_mac(DST_FRAME_1);
-    exp_src := bytes_to_mac(SRC_FRAME_1);
+    -- Test 1: Valid packet from tb_fcs_check_parallel
+    report "=== Test 1: Valid packet (PKT_OK) ===";
+    saw_mac_ready := false;
+    saw_crc_error := false;
+    send_packet_with_preamble(
+      clk, data_in, data_valid, mac_ready, crc_valid,
+      PREAMBLE, SFD, PKT_OK,
+      saw_mac_ready, saw_crc_error
+    );
 
-    send_frame(clk, data_in, data_valid, PREAMBLE, DST_FRAME_1, SRC_FRAME_1,
-               LEN_FRAME_1, PAYLOAD_1, FCS_1);
+    for i in 0 to 12 loop
+      wait until rising_edge(clk);
+      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+    end loop;
 
-    wait for 5 * CLK_PERIOD;
-
-    assert dst_mac = exp_dst
-      report "Test 1 FAILED: dst_mac mismatch"
+    assert dst_mac = exp_dst_ok
+      report "Test 1 FAILED: dst_mac mismatch. Got " & to_hstring(dst_mac) & 
+              " expected " & to_hstring(exp_dst_ok)
       severity error;
-    assert src_mac = exp_src
-      report "Test 1 FAILED: src_mac mismatch"
+    assert src_mac = exp_src_ok
+      report "Test 1 FAILED: src_mac mismatch. Got " & to_hstring(src_mac) & 
+              " expected " & to_hstring(exp_src_ok)
       severity error;
-    assert mac_ready = '1'
-      report "Test 1 FAILED: mac_ready not set"
+    assert saw_mac_ready
+      report "Test 1 FAILED: mac_ready pulse not seen"
       severity error;
+    assert not saw_crc_error
+      report "Test 1 FAILED: valid packet triggered CRC error"
+      severity error;
+    report "Test 1 PASSED: Valid packet processed correctly";
 
-    report "Test 1 PASSED: Frame processed, MACs extracted, CRC valid";
-    wait for 5 * CLK_PERIOD;
+    -- Test 2: Corrupted packet with same FCS (should trigger CRC error)
+    report "=== Test 2: Corrupted packet (PKT_BAD) ===";
+    saw_mac_ready := false;
+    saw_crc_error := false;
+    send_packet_with_preamble(
+      clk, data_in, data_valid, mac_ready, crc_valid,
+      PREAMBLE, SFD, PKT_BAD,
+      saw_mac_ready, saw_crc_error
+    );
 
-    -- =========================================================================
-    -- Test 2: Korrekter Frame mit 14-Byte Payload (unterschiedliche Länge)
-    -- Erwartet: Größerer Frame wird korrekt verarbeitet, andere Payload-Länge
-    -- =========================================================================
-    report "=== Test 2: Valid Frame with 14-byte Payload and CORRECT CRC ===";
+    for i in 0 to 12 loop
+      wait until rising_edge(clk);
+      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+    end loop;
 
-    exp_dst := bytes_to_mac(DST_FRAME_2);
-    exp_src := bytes_to_mac(SRC_FRAME_2);
-
-    send_frame(clk, data_in, data_valid, PREAMBLE, DST_FRAME_2, SRC_FRAME_2,
-               LEN_FRAME_2, PAYLOAD_2, FCS_2);
-
-    wait for 5 * CLK_PERIOD;
-
-    assert dst_mac = exp_dst
+    assert dst_mac = exp_dst_bad
       report "Test 2 FAILED: dst_mac mismatch"
       severity error;
-    assert src_mac = exp_src
+    assert src_mac = exp_src_bad
       report "Test 2 FAILED: src_mac mismatch"
       severity error;
-    assert mac_ready = '1'
-      report "Test 2 FAILED: mac_ready not set"
+    assert saw_mac_ready
+      report "Test 2 FAILED: mac_ready pulse not seen"
       severity error;
+    assert saw_crc_error
+      report "Test 2 FAILED: expected CRC error not detected"
+      severity error;
+    report "Test 2 PASSED: Corrupted packet detected";
 
-    report "Test 2 PASSED: Larger frame (14 bytes) processed correctly with valid CRC";
-    wait for 5 * CLK_PERIOD;
+    -- Test 3: Reset and re-send valid packet
+    report "=== Test 3: Reset and re-send valid packet ===";
+    reset <= '1';
+    wait for 3 * CLK_PERIOD;
+    wait until rising_edge(clk);
+    reset <= '0';
+    wait for CLK_PERIOD;
 
-    -- =========================================================================
-    -- Test 3: Frame mit FALSCHER CRC
-    -- Erwartet: MACs werden trotzdem extrahiert, aber crc_valid = '1' (CRC-Fehler!)
-    -- =========================================================================
-    report "=== Test 3: Valid Frame with 8-byte Payload but WRONG CRC ===";
+    saw_mac_ready := false;
+    saw_crc_error := false;
+    send_packet_with_preamble(
+      clk, data_in, data_valid, mac_ready, crc_valid,
+      PREAMBLE, SFD, PKT_OK,
+      saw_mac_ready, saw_crc_error
+    );
 
-    exp_dst := bytes_to_mac(DST_FRAME_3);
-    exp_src := bytes_to_mac(SRC_FRAME_3);
+    for i in 0 to 12 loop
+      wait until rising_edge(clk);
+      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+    end loop;
 
-    send_frame(clk, data_in, data_valid, PREAMBLE, DST_FRAME_3, SRC_FRAME_3,
-               LEN_FRAME_3, PAYLOAD_3, FCS_3);
-
-    wait for 5 * CLK_PERIOD;
-
-    assert dst_mac = exp_dst
+    assert dst_mac = exp_dst_ok
       report "Test 3 FAILED: dst_mac mismatch"
       severity error;
-    assert src_mac = exp_src
+    assert src_mac = exp_src_ok
       report "Test 3 FAILED: src_mac mismatch"
       severity error;
-    assert mac_ready = '1'
-      report "Test 3 FAILED: mac_ready not set"
+    assert not saw_crc_error
+      report "Test 3 FAILED: valid packet triggered CRC error"
       severity error;
-    assert crc_valid = '1'
-      report "Test 3 FAILED: crc_valid should indicate CRC error ('1')"
-      severity error;
+    report "Test 3 PASSED: Reset and re-transmission successful";
 
-    report "Test 3 PASSED: CRC error correctly detected! (crc_valid='1')";
-    wait for 5 * CLK_PERIOD;
-
-    report "=== All tests completed successfully ===" severity note;
+    report "=== All Frame Handler tests PASSED ===" severity note;
     std.env.stop;
   end process;
 

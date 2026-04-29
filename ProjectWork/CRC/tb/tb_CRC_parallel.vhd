@@ -9,10 +9,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_fcs_check_parallel is
+entity tb_CRC_parallel is
 end entity;
 
-architecture sim of tb_fcs_check_parallel is
+architecture sim of tb_CRC_parallel is
 
   --------------------------------------------------------------------------
   -- DUT component (ADAPT THIS to your actual parallel entity name/ports)
