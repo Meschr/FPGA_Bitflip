@@ -62,7 +62,7 @@ entity mac_read is
 end mac_read;
 
 architecture rtl of mac_read is
-    type state_t is (ZERO, ZERO_WAIT, ONE, ONE_WAIT, TWO, TWO_WAIT, THREE, THREE_WAIT);
+    type state_t is (ZERO, ZERO_WAIT, ZERO_OUT, ONE, ONE_WAIT, ONE_OUT, TWO, TWO_WAIT, TWO_OUT, THREE, THREE_WAIT, THREE_OUT);
     signal state, state_next : state_t;
 
     signal raddr_next : std_logic_vector(ADDR_WIDTH-1 downto 0);
@@ -97,6 +97,16 @@ begin
                 -- read data available this cycle
                 state_next <= ONE;
                 ack0 <= '1';
+            when ZERO_OUT =>
+                state_next <= ONE;
+                ack0 <= '1';
+                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                    valid0_reg <= '0';
+                else
+                    valid0_reg <= '1';
+                    dest0_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                end if;
+                
             when ONE =>
                 state_next <= TWO;
                 if req1 = '1' then
@@ -105,8 +115,16 @@ begin
                     state_next <= ONE_WAIT;
                 end if;
             when ONE_WAIT =>
+                state_next <= ONE_OUT;
+            when ONE_OUT =>
                 state_next <= TWO;
                 ack1 <= '1';
+                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                    valid1_reg <= '0';
+                else
+                    valid1_reg <= '1';
+                    dest1_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                end if;
             when TWO =>
                 state_next <= THREE;
                 if req2 = '1' then
@@ -115,8 +133,16 @@ begin
                     state_next <= TWO_WAIT;
                 end if;
             when TWO_WAIT =>
+                state_next <= TWO_OUT;
+            when TWO_OUT =>
                 state_next <= THREE;
                 ack2 <= '1';
+                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                    valid2_reg <= '0';
+                else
+                    valid2_reg <= '1';
+                    dest2_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                end if;
             when THREE =>
                 state_next <= ZERO;
                 if req3 = '1' then
@@ -125,8 +151,16 @@ begin
                     state_next <= THREE_WAIT;
                 end if;
             when THREE_WAIT =>
+                state_next <= THREE_OUT;
+            when THREE_OUT =>
                 state_next <= ZERO;
                 ack3 <= '1';
+                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                    valid3_reg <= '0';
+                else
+                    valid3_reg <= '1';
+                    dest3_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                end if;
         end case;
     end process round_robin_comb;
 
@@ -143,60 +177,6 @@ begin
             ren <= ren_next;
         end if;
     end process round_robin_seq;
-
-    -- buffers: update destination and valid outputs when a read completes
-    buffers : process(clk, rst)
-    begin
-        if rst = '0' then
-            dest0_reg <= 0; dest1_reg <= 0; dest2_reg <= 0; dest3_reg <= 0;
-            valid0_reg <= '0'; valid1_reg <= '0'; valid2_reg <= '0'; valid3_reg <= '0';
-        elsif rising_edge(clk) then
-            -- deassert valid immediately when a new req is asserted (per spec)
-            if req0 = '1' then
-                valid0_reg <= '0';
-            elsif ack0 = '1' then
-                if not rdata(DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
-                    valid0_reg <= '1';
-                else
-                    valid0_reg <= '0';
-                end if;
-                dest0_reg <= to_integer(unsigned(rdata(1 downto 0)));
-            end if;
-
-            if req1 = '1' then
-                valid1_reg <= '0';
-            elsif ack1 = '1' then
-                if not rdata(DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
-                    valid1_reg <= '1';
-                else
-                    valid1_reg <= '0';
-                end if;
-                dest1_reg <= to_integer(unsigned(rdata(1 downto 0)));
-            end if;
-
-            if req2 = '1' then
-                valid2_reg <= '0';
-            elsif ack2 = '1' then
-                if not rdata(DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
-                    valid2_reg <= '1';
-                else
-                    valid2_reg <= '0';
-                end if;
-                dest2_reg <= to_integer(unsigned(rdata(1 downto 0)));
-            end if;
-
-            if req3 = '1' then
-                valid3_reg <= '0';
-            elsif ack3 = '1' then
-                if not rdata(DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
-                    valid3_reg <= '1';
-                else
-                    valid3_reg <= '0';
-                end if;
-                dest3_reg <= to_integer(unsigned(rdata(1 downto 0)));
-            end if;
-        end if;
-    end process buffers;
 
     -- output assignments
     dest0 <= dest0_reg;
