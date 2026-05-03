@@ -1,5 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use ieee.numeric_std.all;
 
 entity mac_table is
     generic (
@@ -33,13 +34,13 @@ entity mac_table is
         dst_mac3   : in  std_logic_vector(47 downto 0);
         dst_req3   : in  std_logic;
 
-        dst0       : out integer range 0 to 3;
+        dst0       : out unsigned(1 downto 0);
         dst_valid0 : out std_logic;
-        dst1       : out integer range 0 to 3;
+        dst1       : out unsigned(1 downto 0);
         dst_valid1 : out std_logic;
-        dst2       : out integer range 0 to 3;
+        dst2       : out unsigned(1 downto 0);
         dst_valid2 : out std_logic;
-        dst3       : out integer range 0 to 3;
+        dst3       : out unsigned(1 downto 0);
         dst_valid3 : out std_logic
         );
 end mac_table;
@@ -60,8 +61,7 @@ architecture rtl of mac_table is
     signal bram_wren_b : std_logic;
 
     -- mac_read outputs
-    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig : integer range 
-    0 to 3;
+    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig : unsigned(1 downto 0);
     signal valid0_sig, valid1_sig, valid2_sig, valid3_sig : std_logic;
 
 begin

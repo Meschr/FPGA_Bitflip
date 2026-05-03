@@ -45,13 +45,13 @@ entity mac_read is
         req3   : in  std_logic;
 
         -- Ausgaben
-        dest0  : out integer range 0 to 3;
+        dest0  : out unsigned(1 downto 0);
         valid0 : out std_logic;
-        dest1  : out integer range 0 to 3;
+        dest1  : out unsigned(1 downto 0);
         valid1 : out std_logic;
-        dest2  : out integer range 0 to 3;
+        dest2  : out unsigned(1 downto 0);
         valid2 : out std_logic;
-        dest3  : out integer range 0 to 3;
+        dest3  : out unsigned(1 downto 0);
         valid3 : out std_logic;
 
         -- Service (bram interfacing)
@@ -70,13 +70,13 @@ architecture rtl of mac_read is
 
     signal ack0, ack1, ack2, ack3 : std_logic;
 
-    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : integer range 0 to 3 := 0;
+    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : unsigned(1 downto 0) := (others => '0');
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : std_logic := '0';
 
 begin
 
     -- Round robin combinational: decide which port to read next
-    round_robin_comb : process(state, req0, req1, req2, req3, addr0, addr1, addr2, addr3)
+    round_robin_comb : process(state, req0, req1, req2, req3, addr0, addr1, addr2, addr3, rdata)
     begin
         -- defaults
         state_next   <= state;
@@ -104,7 +104,7 @@ begin
                     valid0_reg <= '0';
                 else
                     valid0_reg <= '1';
-                    dest0_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                    dest0_reg <= unsigned(rdata(1 downto 0));
                 end if;
                 
             when ONE =>
@@ -123,7 +123,7 @@ begin
                     valid1_reg <= '0';
                 else
                     valid1_reg <= '1';
-                    dest1_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                    dest1_reg <= unsigned(rdata(1 downto 0));
                 end if;
             when TWO =>
                 state_next <= THREE;
@@ -141,7 +141,7 @@ begin
                     valid2_reg <= '0';
                 else
                     valid2_reg <= '1';
-                    dest2_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                    dest2_reg <= unsigned(rdata(1 downto 0));
                 end if;
             when THREE =>
                 state_next <= ZERO;
@@ -159,7 +159,7 @@ begin
                     valid3_reg <= '0';
                 else
                     valid3_reg <= '1';
-                    dest3_reg <= to_integer(unsigned(rdata(1 downto 0)));
+                    dest3_reg <= unsigned(rdata(1 downto 0));
                 end if;
         end case;
     end process round_robin_comb;

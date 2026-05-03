@@ -34,13 +34,13 @@ architecture rtl of tb_mac_read is
     signal mac_req3  : std_logic := '0';
 
     -- mac_read outputs
-    signal dest0  : integer range 0 to 3;
+    signal dest0  : unsigned(1 downto 0);
     signal valid0 : std_logic;
-    signal dest1  : integer range 0 to 3;
+    signal dest1  : unsigned(1 downto 0);
     signal valid1 : std_logic;
-    signal dest2  : integer range 0 to 3;
+    signal dest2  : unsigned(1 downto 0);
     signal valid2 : std_logic;
-    signal dest3  : integer range 0 to 3;
+    signal dest3  : unsigned(1 downto 0);
     signal valid3 : std_logic;
 
     -- cycle counter
@@ -181,7 +181,7 @@ begin
         if valid1 = '1' and dest1 = 0 then
             report "PASS: addr 200 produced valid1=1 dest1=0 as expected" severity NOTE;
         else
-            report "FAIL: addr 200 mismatch: valid1=" & std_logic'image(valid1) & " dest1=" & integer'image(dest1) severity WARNING;
+            report "FAIL: addr 200 mismatch: valid1=" & std_logic'image(valid1) & " dest1=" & integer'image(to_integer(dest1)) severity WARNING;
         end if;
 
         -- PHASE 3: Request address 201 (valid dest 1)
@@ -194,7 +194,7 @@ begin
         if valid2 = '1' and dest2 = 1 then
             report "PASS: addr 201 produced valid2=1 dest2=1 as expected" severity NOTE;
         else
-            report "FAIL: addr 201 mismatch: valid2=" & std_logic'image(valid2) & " dest2=" & integer'image(dest2) severity WARNING;
+            report "FAIL: addr 201 mismatch: valid2=" & std_logic'image(valid2) & " dest2=" & integer'image(to_integer(dest2)) severity WARNING;
         end if;
 
         report "============================================" severity NOTE;

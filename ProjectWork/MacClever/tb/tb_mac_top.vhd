@@ -37,7 +37,7 @@ architecture rtl of tb_mac_top is
     signal dst_req0, dst_req1, dst_req2, dst_req3     : std_logic;
     
     -- Output signals (Port 0-3)
-    signal dst0, dst1, dst2, dst3                     : integer range 0 to 3;
+    signal dst0, dst1, dst2, dst3                     : unsigned(1 downto 0);
     signal dst_valid0, dst_valid1, dst_valid2, dst_valid3 : std_logic;
     
     -- Simulation control
@@ -240,7 +240,7 @@ begin
             if dst0 = 0 then
                 report "  Port 0 lookup PASS: Got port 0 (expected port 0)" severity NOTE;
             else
-                report "  Port 0 lookup FAIL: Got port " & integer'image(dst0) & " (expected 0)" severity WARNING;
+                report "  Port 0 lookup FAIL: Got port " & integer'image(to_integer(dst0)) & " (expected 0)" severity WARNING;
             end if;
         else
             report "  Port 0 lookup: No match (MAC not found in table)" severity WARNING;
@@ -263,7 +263,7 @@ begin
             if dst1 = 1 then
                 report "  Port 1 lookup PASS: Got port 1 (expected port 1)" severity NOTE;
             else
-                report "  Port 1 lookup FAIL: Got port " & integer'image(dst1) & " (expected 1)" severity WARNING;
+                report "  Port 1 lookup FAIL: Got port " & integer'image(to_integer(dst1)) & " (expected 1)" severity WARNING;
             end if;
         else
             report "  Port 1 lookup: No match (MAC not found in table)" severity WARNING;
@@ -286,7 +286,7 @@ begin
             if dst2 = 2 then
                 report "  Port 2 lookup PASS: Got port 2 (expected port 2)" severity NOTE;
             else
-                report "  Port 2 lookup FAIL: Got port " & integer'image(dst2) & " (expected 2)" severity WARNING;
+                report "  Port 2 lookup FAIL: Got port " & integer'image(to_integer(dst2)) & " (expected 2)" severity WARNING;
             end if;
         else
             report "  Port 2 lookup: No match (MAC not found in table)" severity WARNING;
@@ -310,7 +310,7 @@ begin
             if dst3 = 3 then
                 report "  Port 3 lookup PASS: Got port 3 (expected port 3)" severity NOTE;
             else
-                report "  Port 3 lookup FAIL: Got port " & integer'image(dst3) & " (expected 3)" severity WARNING;
+                report "  Port 3 lookup FAIL: Got port " & integer'image(to_integer(dst3)) & " (expected 3)" severity WARNING;
             end if;
         else
             report "  Port 3 lookup: No match (MAC not found in table)" severity WARNING;
@@ -337,7 +337,7 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid0 = '1' then
-            report "  Port 0 lookup of Port 1 MAC: Got port " & integer'image(dst0) & " (expected 1)" severity NOTE;
+            report "  Port 0 lookup of Port 1 MAC: Got port " & integer'image(to_integer(dst0)) & " (expected 1)" severity NOTE;
             if dst0 = 1 then
                 report "    PASS: Correct cross-port lookup" severity NOTE;
             else
@@ -394,7 +394,7 @@ begin
                 report "  After 100-clock aging: First Port 2 MAC (0x" & to_hstring(MAC_P2_A) & ") still accessible" severity NOTE;
                 report "    PASS: MAC learned on Port 2 is still in table after aging" severity NOTE;
             else
-                report "    FAIL: Got port " & integer'image(dst2) & " instead of 2" severity WARNING;
+                report "    FAIL: Got port " & integer'image(to_integer(dst2)) & " instead of 2" severity WARNING;
             end if;
         else
             report "  After 100-clock aging: First Port 2 MAC NO LONGER in table (expired)" severity NOTE;
@@ -418,7 +418,7 @@ begin
                 report "  After learning: Second Port 2 MAC (0x" & to_hstring(MAC_P2_B) & ") found at port 2" severity NOTE;
                 report "    PASS: Newly learned MAC is in table" severity NOTE;
             else
-                report "    FAIL: Got port " & integer'image(dst2) & " instead of 2" severity WARNING;
+                report "    FAIL: Got port " & integer'image(to_integer(dst2)) & " instead of 2" severity WARNING;
             end if;
         else
             report "  Second Port 2 MAC not found" severity WARNING;
