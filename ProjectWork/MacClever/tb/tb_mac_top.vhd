@@ -333,7 +333,7 @@ begin
         dst_req0 <= '0';
         wait until rising_edge(clk);
         
-        wait for CLK_PERIOD * 10;
+        wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
         
         if dst_valid0 = '1' then
@@ -490,7 +490,7 @@ begin
         wait until rising_edge(clk);
         dst_req0 <= '0';
         wait until rising_edge(clk);
-        wait for CLK_PERIOD * 10;
+        wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
         if dst_valid0 = '1' and dst0 = 0 then
             report "  Port 0 MAC B: PASS" severity NOTE;
@@ -507,7 +507,7 @@ begin
         wait until rising_edge(clk);
         dst_req1 <= '0';
         wait until rising_edge(clk);
-        wait for CLK_PERIOD * 10;
+        wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
         if dst_valid1 = '1' and dst1 = 1 then
             report "  Port 1 MAC B: PASS" severity NOTE;
@@ -524,7 +524,7 @@ begin
         wait until rising_edge(clk);
         dst_req3 <= '0';
         wait until rising_edge(clk);
-        wait for CLK_PERIOD * 10;
+        wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
         if dst_valid3 = '1' and dst3 = 3 then
             report "  Port 3 MAC B: PASS" severity NOTE;
