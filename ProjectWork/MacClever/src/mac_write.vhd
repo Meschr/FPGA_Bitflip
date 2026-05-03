@@ -24,7 +24,7 @@ use ieee.numeric_std.all;
 --     reqx   : requesting a read. assert at the same time as giving the address (already registered in source entity)
 --     validx : the fcs check was passed, the write action can be commited. 
 
-entity mac_read is
+entity mac_write is
     generic (
         ADDR_WIDTH : positive := 13; -- address size
         DATA_WIDTH : positive := 8;  -- bram depth
@@ -60,9 +60,9 @@ entity mac_read is
         ren    : out std_logic;
         rdata  : in  std_logic_vector(DATA_WIDTH - 1 downto 0)
     );
-end mac_read;
+end mac_write;
 
-architecture rtl of mac_read is
+architecture rtl of mac_write is
     signal ack0, ack1, ack2, ack3, ackcnt                     : std_logic;
     signal reqcnt                                             : std_logic;
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg     : std_logic;

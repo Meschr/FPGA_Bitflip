@@ -85,8 +85,8 @@ begin
             q_b       => bram_q_b
         );
     
-    -- Instantiate mac_write (entity named mac_read in the source file)
-    u_mac_write : entity work.mac_read
+    -- Instantiate mac_write
+    u_mac_write : entity work.mac_write
         generic map (
             ADDR_WIDTH => ADDR_WIDTH,
             DATA_WIDTH => DATA_WIDTH,

@@ -44,13 +44,13 @@ entity mac_read is
         req3   : in  std_logic;
 
         -- Ausgaben
-        dest0  : out integer 0 to 3;
+        dest0  : out integer range 0 to 3;
         valid0 : out std_logic;
-        dest1  : out integer 0 to 3;
+        dest1  : out integer range 0 to 3;
         valid1 : out std_logic;
-        dest2  : out integer 0 to 3;
+        dest2  : out integer range 0 to 3;
         valid2 : out std_logic;
-        dest3  : out integer 0 to 3;
+        dest3  : out integer range 0 to 3;
         valid3 : out std_logic;
 
         -- Service (bram interfacing)
