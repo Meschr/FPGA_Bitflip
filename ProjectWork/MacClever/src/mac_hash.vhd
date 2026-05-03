@@ -2,6 +2,9 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 entity mac_hash is
+    generic (
+        ADDR_WIDTH : positive := 13  -- address size, max 16
+    );
     port (
 
         -- System
@@ -13,13 +16,13 @@ entity mac_hash is
         en       : in  std_logic;
 
         -- Ausgaben
-        hash_out : inout std_logic_vector(12 downto 0);
+        hash_out : inout std_logic_vector(ADDR_WIDTH - 1 downto 0);
         ready    : out std_logic
     );
 end mac_hash;
 
 architecture rtl of mac_hash is
-    type state_t is (IDLE, RUN);
+    type state_t is (IDLE, RUN, FIN);
 
     signal state         : state_t;
     signal crc_reg       : std_logic_vector(15 downto 0);
@@ -47,7 +50,7 @@ begin
                     crc_reg     <= x"FFFF";
                     bit_counter <= 47;
                     -- Ausgaben
-                    hash_out    <= crc_reg(12 downto 0);
+                    hash_out    <= hash_out;
                     ready       <= '1';
 
                     if en = '1' then
@@ -77,11 +80,15 @@ begin
                     
                     if bit_counter = 0 then
                         -- Berechnung fertig
-                        state       <= IDLE;
-                        bit_counter <= 47;
+                        state       <= FIN;
                     else
                         bit_counter <= bit_counter - 1;
                     end if;  
+                when FIN =>
+                    bit_counter <= 47;
+                    state       <= IDLE;
+                    hash_out    <= crc_reg(ADDR_WIDTH - 1 downto 0);
+                    ready       <= '1';
             end case ;
         end if;
 

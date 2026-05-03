@@ -47,9 +47,9 @@ end mac_table;
 architecture rtl of mac_table is
 
     -- Hash outputs and ready signals
-    signal src_hash0, src_hash1, src_hash2, src_hash3 : std_logic_vector(12 downto 0);
+    signal src_hash0, src_hash1, src_hash2, src_hash3 : std_logic_vector(ADDR_WIDTH - 1 downto 0);
     signal src_ready0, src_ready1, src_ready2, src_ready3 : std_logic;
-    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3 : std_logic_vector(12 downto 0);
+    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3 : std_logic_vector(ADDR_WIDTH - 1 downto 0);
     signal dst_ready0, dst_ready1, dst_ready2, dst_ready3 : std_logic;
 
     -- BRAM signals
@@ -68,6 +68,9 @@ begin
 
     -- Source MAC Hash instances
     src_hash_0 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -77,6 +80,9 @@ begin
             ready  => src_ready0
         );
     src_hash_1 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )   
         port map (
             clk    => clk,
             rst    => rst,
@@ -86,6 +92,9 @@ begin
             ready  => src_ready1
         );
     src_hash_2 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -95,6 +104,9 @@ begin
             ready  => src_ready2
         );
     src_hash_3 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -106,6 +118,9 @@ begin
 
     -- Destination MAC Hash instances
     dst_hash_0 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -115,6 +130,9 @@ begin
             ready  => dst_ready0
         );
     dst_hash_1 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -124,6 +142,9 @@ begin
             ready  => dst_ready1
         );
     dst_hash_2 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,
@@ -133,6 +154,9 @@ begin
             ready  => dst_ready2
         );
     dst_hash_3 : entity work.mac_hash
+        generic map (
+            ADDR_WIDTH => ADDR_WIDTH
+        )
         port map (
             clk    => clk,
             rst    => rst,

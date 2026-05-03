@@ -165,10 +165,10 @@ begin
             when COUNTER_W =>
                 round_robin_next <= ZERO;
                 ackcnt     <= '1';
-                if not rdata(DATA_WIDTH - 1 downto 2) = (DATA_WIDTH - 1 downto 2 => '0') then
+                if unsigned(rdata(DATA_WIDTH - 1 downto 2)) /= 0 then
                     addr_next  <= expiry_addr;
                     wen_next   <= '1';
-                    wdata_next <= std_logic_vector(unsigned(rdata) - 1);
+                    wdata_next <= std_logic_vector(unsigned(rdata(DATA_WIDTH - 1 downto 2)) - 1) & rdata(1 downto 0);
                 end if;
         end case;
     end process round_robin_comb;

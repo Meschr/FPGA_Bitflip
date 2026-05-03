@@ -95,12 +95,12 @@ begin
                 end if;
             when ZERO_WAIT =>
                 -- read data available this cycle
-                state_next <= ONE;
+                state_next <= ZERO_OUT;
                 ack0 <= '1';
             when ZERO_OUT =>
                 state_next <= ONE;
                 ack0 <= '1';
-                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
                     valid0_reg <= '0';
                 else
                     valid0_reg <= '1';
@@ -119,7 +119,7 @@ begin
             when ONE_OUT =>
                 state_next <= TWO;
                 ack1 <= '1';
-                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
                     valid1_reg <= '0';
                 else
                     valid1_reg <= '1';
@@ -137,7 +137,7 @@ begin
             when TWO_OUT =>
                 state_next <= THREE;
                 ack2 <= '1';
-                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
                     valid2_reg <= '0';
                 else
                     valid2_reg <= '1';
@@ -155,7 +155,7 @@ begin
             when THREE_OUT =>
                 state_next <= ZERO;
                 ack3 <= '1';
-                if rdata (DATA_WIDTH-1 downto 2) = (DATA_WIDTH-1 downto 2 => '0') then
+                if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
                     valid3_reg <= '0';
                 else
                     valid3_reg <= '1';

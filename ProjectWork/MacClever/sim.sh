@@ -236,7 +236,7 @@ echo -e "${CYAN}=== Simuliere: $entity ===${NC}"
 echo -e "  ${GRAY}Wave-Datei: $waveFile${NC}"
 echo ""
 
-ghdl -r --std=08 --workdir=work "$entity" --wave="$waveFile" --stop-time=10us
+ghdl -r --std=08 --workdir=work "$entity" --wave="$waveFile" --stop-time=1000us
 simResult=$?
 
 if [ $simResult -ne 0 ]; then
