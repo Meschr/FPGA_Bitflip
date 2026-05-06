@@ -93,21 +93,28 @@ begin
 
     process (dest_port_flag, eof) 
         variable rd_dest_port_en_int : std_logic_vector(3 downto 0) := (others => '0');
-
+        variable can_read_int : std_logic := '0';
     begin
         if dest_port_flag = '1' then    
             
             rd_dest_port_en_int := dest_port;
-            can_read <= '1';
+            can_read_int := '1';
+        else
+            rd_dest_port_en_int := rd_dest_port_en_int;
+            can_read_int := can_read_int;
         end if;   
         
         if eof = '1' then
             rd_dest_port_en_int := (others => '0');
-            can_read <= '0';
+            can_read_int := '0';
+        else
+            rd_dest_port_en_int := rd_dest_port_en_int;
+            can_read_int := can_read_int;
         end if;
 
 
         rd_dest_port_en <= rd_dest_port_en_int;
+        can_read <= can_read_int;
     end process;
 
 
@@ -143,8 +150,8 @@ begin
     rd_data  <= rd_reg(7 downto 0);  -- Lower 8 Bits = Daten
 
     -- rd_eof ist nur gueltig, wenn rd_valid_reg='1'
-    rd_eof   <= rd_reg(8);  -- Bit 8 = EOF-Flag
-    eof <= rd_reg(8); 
+    rd_eof   <= rd_reg(8) and rd_valid_reg; -- Bit 8 = EOF-Flag
+    eof <= rd_reg(8) and rd_valid_reg;
 
 
      ptr_proc : process(clk)
@@ -155,8 +162,10 @@ begin
                 wr_ptr        <= (others => '0');
                 rd_ptr        <= (others => '0');
                 count         <= (others => '0');
-            
+                rd_valid_reg  <= '0';
             else
+                -- rd_valid_reg folgt can_read: wird '1' wenn gerade ein Byte gelesen wurde
+                rd_valid_reg <= can_read;
                 
                 -- Pointer- und Belegungszaehler aktualisieren:
                 if can_write = '1' and can_read = '0' then
@@ -179,7 +188,7 @@ begin
 
     -- Ausgabe Status-Signale
     full      <= full_int;
-    empty     <= empty_int;
+    
 
 
 end architecture rtl;
