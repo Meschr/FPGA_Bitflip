@@ -95,13 +95,13 @@ begin
         variable rd_dest_port_en_int : std_logic_vector(3 downto 0) := (others => '0');
 
     begin
-        if rising_edge(dest_port_flag) then    
+        if dest_port_flag = '1' then    
             
             rd_dest_port_en_int := dest_port;
             can_read <= '1';
         end if;   
         
-        if rising_edge(eof) then
+        if eof = '1' then
             rd_dest_port_en_int := (others => '0');
             can_read <= '0';
         end if;
@@ -147,5 +147,39 @@ begin
     eof <= rd_reg(8); 
 
 
+     ptr_proc : process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' or flush = '1' then
+                -- Reset: Alle Pointer auf 0, FIFO ist leer
+                wr_ptr        <= (others => '0');
+                rd_ptr        <= (others => '0');
+                count         <= (others => '0');
+            
+            else
+                
+                -- Pointer- und Belegungszaehler aktualisieren:
+                if can_write = '1' and can_read = '0' then
+                    -- Nur Schreiben: wr_ptr erhoehen, count erhoehen
+                    wr_ptr <= wr_ptr + 1;
+                    count  <= count + 1;
+                elsif can_write = '0' and can_read = '1' then
+                    -- Nur Lesen: rd_ptr erhoehen, count verringern
+                    rd_ptr <= rd_ptr + 1;
+                    count  <= count - 1;
+                elsif can_write = '1' and can_read = '1' then
+                    -- Gleichzeitiges Schreiben und Lesen: beide Pointer erhoehen, count bleibt gleich
+                    wr_ptr <= wr_ptr + 1;
+                    rd_ptr <= rd_ptr + 1;
+                end if;
 
-end architecture;
+            end if;
+        end if;
+    end process ptr_proc;
+
+    -- Ausgabe Status-Signale
+    full      <= full_int;
+    empty     <= empty_int;
+
+
+end architecture rtl;
