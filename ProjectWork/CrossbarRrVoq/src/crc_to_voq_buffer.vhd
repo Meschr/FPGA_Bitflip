@@ -67,7 +67,8 @@ architecture rtl of crc_to_voq_buffer is
 
     -- Lese-Register (Pipeline-Stage)
     signal rd_reg         : std_logic_vector(8 downto 0)      := (others => '0'); -- Register fuer aktuell gelesene Daten (Bit 8: EOF, Bits 7-0: Daten)
-    signal rd_valid_reg   : std_logic                         := '0'; -- '1' wenn rd_reg frisch mit Daten gefuellt wurde
+    signal rd_valid_reg   : std_logic                         := '0';             -- '1' wenn rd_reg frisch mit Daten gefuellt wurde
+    signal eof          : std_logic;                                              -- '1' wenn das aktuell gelesene Byte das EOF-Byte ist
 
     -- Interne Flags
     signal full_int       : std_logic;
@@ -79,25 +80,72 @@ architecture rtl of crc_to_voq_buffer is
     
 
 begin
-    process (dest_port_flag) 
+
+
+    -- Berechne FIFO-Status-Flags
+    full_int  <= '1' when count = to_unsigned(DEPTH, count'length) else '0';
+    empty_int <= '1' when count = to_unsigned(0, count'length) else '0';
+
+    can_write <= '1' when (wr_en = '1' and full_int = '0') else '0';
+
+
+
+
+    process (dest_port_flag, eof) 
         variable rd_dest_port_en_int : std_logic_vector(3 downto 0) := (others => '0');
 
     begin
-        if rising_edge(dest_port_flag) then       
-
-            if    dest_port(0)='1' then
-                rd_dest_port_en_int(0) := '1';
-            elsif dest_port(1)='1' then
-                rd_dest_port_en_int(1) := '1';
-            elsif dest_port(2)='1' then
-                rd_dest_port_en_int(2) := '1';
-            elsif dest_port(3)='1' then
-                rd_dest_port_en_int(3) :='1';
-            end if;        
+        if rising_edge(dest_port_flag) then    
             
-        end if;    
+            rd_dest_port_en_int := dest_port;
+            can_read <= '1';
+        end if;   
+        
+        if rising_edge(eof) then
+            rd_dest_port_en_int := (others => '0');
+            can_read <= '0';
+        end if;
+
 
         rd_dest_port_en <= rd_dest_port_en_int;
-
     end process;
+
+
+
+    write_proc : process(clk)
+    begin
+        if rising_edge(clk) then
+            if can_write = '1' then
+                -- Speicherformat: Bit 8 = EOF, Bits 7-0 = Daten
+                ram(to_integer(wr_ptr)) <= wr_eof & wr_data;
+            end if;
+        end if;
+    end process write_proc;
+
+
+
+
+    read_proc : process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' or flush = '1' then
+                rd_reg <= (others => '0');
+            elsif can_read = '1' then
+                -- Lade Byte aus RAM: EOF-Flag + Datenbyte
+                rd_reg <= ram(to_integer(rd_ptr));
+
+            end if;
+        end if;
+    end process read_proc;
+
+
+    -- Dekodiere das Read-Register
+    rd_data  <= rd_reg(7 downto 0);  -- Lower 8 Bits = Daten
+
+    -- rd_eof ist nur gueltig, wenn rd_valid_reg='1'
+    rd_eof   <= rd_reg(8);  -- Bit 8 = EOF-Flag
+    eof <= rd_reg(8); 
+
+
+
 end architecture;
