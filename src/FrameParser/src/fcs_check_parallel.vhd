@@ -21,7 +21,6 @@ architecture rtl of fcs_check_parallel is
   signal crc_reg   : std_logic_vector(31 downto 0) := (others => '0');
   signal crc_next  : std_logic_vector(31 downto 0);
   signal checking  : std_logic := '0';
-  signal in_fcs    : std_logic := '0';
   signal head_cnt  : unsigned(5 downto 0) := (others => '0');
 
   signal bit_valid : std_logic;
@@ -33,7 +32,7 @@ begin
 ------------------------------------------------------------------
 -- Combinational CRC next-state (8 bits per cycle, MSB-first)
 ------------------------------------------------------------------
-crc_comb : process(crc_reg, data_in, head_cnt, bit_valid)
+crc_comb : process(crc_reg, data_in, head_cnt, end_of_frame, bit_valid)
   variable c        : std_logic_vector(31 downto 0);
   variable feedback : std_logic;
   variable din_eff  : std_logic_vector(7 downto 0);
@@ -73,7 +72,6 @@ end process;
     if reset = '1' then
       crc_reg   <= (others => '0');
       checking  <= '0';
-      in_fcs    <= '0';
       fcs_error <= '0';
       fcs_ok    <= '0';
       head_cnt  <= (others => '0');
@@ -86,7 +84,6 @@ end process;
       -- Start-of-frame sets control state, but does NOT block processing the bit
       if start_of_frame = '1' then
         checking  <= '1';
-        in_fcs    <= '0';
         fcs_error <= '0';
         fcs_ok    <= '0';
         head_cnt  <= (others => '0');
@@ -106,6 +103,7 @@ end process;
           end if;
 
           checking <= '0';
+          head_cnt <= (others => '0');
           crc_reg  <= (others => '0');
         else
           crc_reg <= crc_next;
