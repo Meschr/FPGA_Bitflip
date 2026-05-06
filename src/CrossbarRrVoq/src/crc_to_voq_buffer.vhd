@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity crc_to_voq_buffer is
     generic (
-        DEPTH       : integer := 2000; -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
+        DEPTH       : integer := 20; -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
         NUM_OUTPUTS : integer := 4     -- Anzahl der Ziel-VOQs
     );
     port (
@@ -34,7 +34,7 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         -- Status-Ausgaenge
         -- -----------------------------------------------------------------
-        frame_rdy     : out std_logic;                     -- '1' wenn mindestens ein kompletter Frame im FIFO vorliegt
+        frame_rdy     : out std_logic;                    -- '1' wenn Frame-Read aktiv ist
         full          : out std_logic_vector(3 downto 0)  -- '1' wenn FIFO voll ist (Schreiben nicht moeglich)
     );
 end entity crc_to_voq_buffer;
@@ -75,8 +75,8 @@ architecture rtl of crc_to_voq_buffer is
     signal empty_int      : std_logic;
     signal can_write      : std_logic;  -- Schreiben erlaubt (wr_en UND nicht voll)
     signal can_read       : std_logic;  -- Lesen erlaubt (rd_en UND nicht leer)
-
-    signal start_rd      : std_logic;     
+    signal rd_active      : std_logic := '0'; -- Frame-Read aktiv bis EOF gelesen
+    signal dest_port_reg  : std_logic_vector(3 downto 0) := (others => '0');
     
 
 begin
@@ -91,31 +91,8 @@ begin
 
 
 
-    process (dest_port_flag, eof) 
-        variable rd_dest_port_en_int : std_logic_vector(3 downto 0) := (others => '0');
-        variable can_read_int : std_logic := '0';
-    begin
-        if dest_port_flag = '1' then    
-            
-            rd_dest_port_en_int := dest_port;
-            can_read_int := '1';
-        else
-            rd_dest_port_en_int := rd_dest_port_en_int;
-            can_read_int := can_read_int;
-        end if;   
-        
-        if eof = '1' then
-            rd_dest_port_en_int := (others => '0');
-            can_read_int := '0';
-        else
-            rd_dest_port_en_int := rd_dest_port_en_int;
-            can_read_int := can_read_int;
-        end if;
-
-
-        rd_dest_port_en <= rd_dest_port_en_int;
-        can_read <= can_read_int;
-    end process;
+    can_read <= '1' when (rd_active = '1' and empty_int = '0') else '0';
+    rd_dest_port_en <= dest_port_reg when rd_valid_reg = '1' else (others => '0');
 
 
 
@@ -163,9 +140,19 @@ begin
                 rd_ptr        <= (others => '0');
                 count         <= (others => '0');
                 rd_valid_reg  <= '0';
+                rd_active     <= '0';
+                dest_port_reg <= (others => '0');
             else
                 -- rd_valid_reg folgt can_read: wird '1' wenn gerade ein Byte gelesen wurde
                 rd_valid_reg <= can_read;
+
+                if dest_port_flag = '1' then
+                    rd_active     <= '1';
+                    dest_port_reg <= dest_port;
+                elsif eof = '1' then
+                    rd_active     <= '0';
+                    dest_port_reg <= (others => '0');
+                end if;
                 
                 -- Pointer- und Belegungszaehler aktualisieren:
                 if can_write = '1' and can_read = '0' then
@@ -187,8 +174,7 @@ begin
     end process ptr_proc;
 
     -- Ausgabe Status-Signale
-    full      <= full_int;
-    
-
+    full      <= (others => full_int);
+    frame_rdy <= rd_active;
 
 end architecture rtl;
