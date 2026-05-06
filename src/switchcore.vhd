@@ -1,6 +1,5 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
 
 entity switchcore is
 
@@ -23,12 +22,14 @@ end switchcore;
 
 architecture rtl of switchcore is
 
-	signal handled_frame0, handled_frame1, handled_frame2, handled_frame3 : std_logic_vector(7 downto 0) ;
-	signal dst_mac0, dst_mac1, dst_mac2, dst_mac3 : std_logic_vector(47 downto 0) ;
-	signal dst_valid0, dst_valid1, dst_valid2, dst_valid3 : std_logic;
-	signal src_mac0, src_mac1, src_mac2, src_mac3 : std_logic_vector(47 downto 0) ;
-	signal src_valid0, src_valid1, src_valid2, src_valid3 : std_logic;
-	signal fcs_valid0, fcs_valid1, fcs_valid2, fcs_valid3 : std_logic;
+	signal handled_frame0, handled_frame1, handled_frame2, handled_frame3 : std_logic_vector(7 downto 0);
+	signal dst_mac0, dst_mac1, dst_mac2, dst_mac3                         : std_logic_vector(47 downto 0);
+	signal dst_valid0, dst_valid1, dst_valid2, dst_valid3                 : std_logic;
+	signal dst_req0, dst_req1, dst_req2, dst_req3                         : std_logic;
+	signal dst0, dst1, dst2, dst3                                         : std_logic_vector(3 downto 0);
+	signal src_mac0, src_mac1, src_mac2, src_mac3                         : std_logic_vector(47 downto 0);
+	signal src_valid0, src_valid1, src_valid2, src_valid3                 : std_logic;
+	signal fcs_valid0, fcs_valid1, fcs_valid2, fcs_valid3                 : std_logic;
 
 BEGIN
 
@@ -91,7 +92,7 @@ BEGIN
 
 	mac_table_inst: entity work.mac_table
 	 generic map(
-		ADDR_WIDTH => 16,
+		ADDR_WIDTH => 14,
 		DATA_WIDTH => 8,
 		FORGET_CNT => 16
 	)		
@@ -111,13 +112,13 @@ BEGIN
 		src_req3 => src_valid3,
 		fcs_valid3 => fcs_valid3,
 		dst_mac0 => dst_mac0,
-		dst_req0 => dst_valid0,
+		dst_req0 => dst_req0,
 		dst_mac1 => dst_mac1,
-		dst_req1 => dst_valid1,
+		dst_req1 => dst_req1,
 		dst_mac2 => dst_mac2,
-		dst_req2 => dst_valid2,
+		dst_req2 => dst_req2,
 		dst_mac3 => dst_mac3,
-		dst_req3 => dst_valid3,
+		dst_req3 => dst_req3,
 		dst0 => dst0,
 		dst_valid0 => dst_valid0,
 		dst1 => dst1,

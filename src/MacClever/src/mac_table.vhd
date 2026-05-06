@@ -168,17 +168,16 @@ begin
 
     -- BRAM instance (shared by mac_read and mac_write)
     mac_bram : entity work.bram
-        generic map (
-            ADDR_WIDTH => ADDR_WIDTH,
-            DATA_WIDTH => DATA_WIDTH
-        )
+        -- generic map (
+        --     ADDR_WIDTH => ADDR_WIDTH,
+        --     DATA_WIDTH => DATA_WIDTH
+        -- )
         port map (
             address_a => bram_addr_a,
             address_b => bram_addr_b,
-            clock0    => clk,
+            clock     => clk,
             data_a    => (others => '0'),
             data_b    => bram_data_b,
-            enable    => '1',
             rden_a    => bram_rden_a,
             rden_b    => bram_rden_b,
             wren_a    => '0',

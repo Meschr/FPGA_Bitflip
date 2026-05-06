@@ -48,3 +48,8 @@ simulation/
 *.exe
 *.cf
 *~
+
+# ========================== 
+# Quartus folder for project
+# ==========================
+quartus/*

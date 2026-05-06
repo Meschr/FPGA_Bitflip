@@ -80,21 +80,30 @@ architecture rtl of mac_read is
     signal raddr_next : std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal ren_next   : std_logic;
 
-    signal ack0, ack1, ack2, ack3 : std_logic;
-
     signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : STD_LOGIC_VECTOR(3 downto 0);
+    signal dest0_next, dest1_next, dest2_next, dest3_next : STD_LOGIC_VECTOR(3 downto 0);
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : std_logic := '0';
+    signal valid0_next, valid1_next, valid2_next, valid3_next : std_logic;
 
 begin
 
     -- Round robin combinational: decide which port to read next
-    round_robin_comb : process(state, req0, req1, req2, req3, addr0, addr1, addr2, addr3, rdata)
+    round_robin_comb : process(state, req0, req1, req2, req3, addr0, addr1, addr2, addr3, rdata, 
+                               dest0_reg, dest1_reg, dest2_reg, dest3_reg,
+                               valid0_reg, valid1_reg, valid2_reg, valid3_reg)
     begin
         -- defaults
         state_next   <= state;
         raddr_next   <= (others => '0');
         ren_next     <= '0';
-        ack0 <= '0'; ack1 <= '0'; ack2 <= '0'; ack3 <= '0';
+        dest0_next <= dest0_reg;
+        dest1_next <= dest1_reg;
+        dest2_next <= dest2_reg;
+        dest3_next <= dest3_reg;
+        valid0_next <= valid0_reg;
+        valid1_next <= valid1_reg;
+        valid2_next <= valid2_reg;
+        valid3_next <= valid3_reg;
 
         case state is
             when ZERO =>
@@ -108,15 +117,13 @@ begin
             when ZERO_WAIT =>
                 -- read data available this cycle
                 state_next <= ZERO_OUT;
-                ack0 <= '1';
             when ZERO_OUT =>
                 state_next <= ONE;
-                ack0 <= '1';
-                valid0_reg <= '1';
+                valid0_next <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    dest0_reg  <= "1110";
+                    dest0_next  <= "1110";
                 else
-                    dest0_reg <= to_onehot(rdata(1 downto 0));
+                    dest0_next <= to_onehot(rdata(1 downto 0));
                 end if;
                 
             when ONE =>
@@ -130,12 +137,11 @@ begin
                 state_next <= ONE_OUT;
             when ONE_OUT =>
                 state_next <= TWO;
-                ack1 <= '1';
-                valid1_reg <= '1';
+                valid1_next <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    dest1_reg <= "1101";
+                    dest1_next <= "1101";
                 else
-                    dest1_reg <= to_onehot(rdata(1 downto 0));
+                    dest1_next <= to_onehot(rdata(1 downto 0));
                 end if;
             when TWO =>
                 state_next <= THREE;
@@ -148,12 +154,11 @@ begin
                 state_next <= TWO_OUT;
             when TWO_OUT =>
                 state_next <= THREE;
-                ack2 <= '1';
-                valid2_reg <= '1';
+                valid2_next <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    dest2_reg <= "1011";
+                    dest2_next <= "1011";
                 else
-                    dest2_reg <= to_onehot(rdata(1 downto 0));
+                    dest2_next <= to_onehot(rdata(1 downto 0));
                 end if;
             when THREE =>
                 state_next <= ZERO;
@@ -166,12 +171,11 @@ begin
                 state_next <= THREE_OUT;
             when THREE_OUT =>
                 state_next <= ZERO;
-                ack3 <= '1';
-                valid3_reg <= '1';
+                valid3_next <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    dest3_reg <= "0111";
+                    dest3_next <= "0111";
                 else
-                    dest3_reg <= to_onehot(rdata(1 downto 0));
+                    dest3_next <= to_onehot(rdata(1 downto 0));
                 end if;
         end case;
     end process round_robin_comb;
@@ -183,10 +187,26 @@ begin
             state <= ZERO;
             raddr <= (others => '0');
             ren <= '0';
+            dest0_reg <= (others => '0');
+            dest1_reg <= (others => '0');
+            dest2_reg <= (others => '0');
+            dest3_reg <= (others => '0');
+            valid0_reg <= '0';
+            valid1_reg <= '0';
+            valid2_reg <= '0';
+            valid3_reg <= '0';
         elsif rising_edge(clk) then
             state <= state_next;
             raddr <= raddr_next;
             ren <= ren_next;
+            dest0_reg <= dest0_next;
+            dest1_reg <= dest1_next;
+            dest2_reg <= dest2_next;
+            dest3_reg <= dest3_next;
+            valid0_reg <= valid0_next;
+            valid1_reg <= valid1_next;
+            valid2_reg <= valid2_next;
+            valid3_reg <= valid3_next;
         end if;
     end process round_robin_seq;
 

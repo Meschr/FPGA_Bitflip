@@ -69,8 +69,7 @@ begin
             DATA_WIDTH => DATA_WIDTH
         )
         port map (
-            clock0   => clk,
-            enable   => '1',
+            clock    => clk,
             -- Port A (connected to mac_write)
             address_a => bram_addr_a,
             data_a    => bram_data_a,

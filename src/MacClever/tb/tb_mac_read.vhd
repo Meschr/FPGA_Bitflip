@@ -68,10 +68,9 @@ begin
         port map (
             address_a => bram_addr_a,
             address_b => bram_addr_b,
-            clock0    => clk,
+            clock     => clk,
             data_a    => (others => '0'), -- not used on port A
             data_b    => bram_data_b,
-            enable    => '1',
             rden_a    => bram_rden_a,
             rden_b    => '0',
             wren_a    => '0',

@@ -10,10 +10,9 @@ entity bram is
     port (
         address_a : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
         address_b : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
-        clock0    : in  std_logic;
+        clock    : in  std_logic;
         data_a    : in  std_logic_vector(DATA_WIDTH-1 downto 0);
         data_b    : in  std_logic_vector(DATA_WIDTH-1 downto 0);
-        enable    : in  std_logic;
         rden_a    : in  std_logic;
         rden_b    : in  std_logic;
         wren_a    : in  std_logic;
@@ -32,25 +31,23 @@ architecture rtl of bram is
     signal q_b_reg : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 begin
 
-    process (clock0)
+    process (clock)
     begin
-        if rising_edge(clock0) then
-            if enable = '1' then
-                if wren_a = '1' then
-                    ram(to_integer(unsigned(address_a))) <= data_a;
-                end if;
+        if rising_edge(clock) then
+            if wren_a = '1' then
+                ram(to_integer(unsigned(address_a))) <= data_a;
+            end if;
 
-                if wren_b = '1' then
-                    ram(to_integer(unsigned(address_b))) <= data_b;
-                end if;
+            if wren_b = '1' then
+                ram(to_integer(unsigned(address_b))) <= data_b;
+            end if;
 
-                if rden_a = '1' then
-                    q_a_reg <= ram(to_integer(unsigned(address_a)));
-                end if;
+            if rden_a = '1' then
+                q_a_reg <= ram(to_integer(unsigned(address_a)));
+            end if;
 
-                if rden_b = '1' then
-                    q_b_reg <= ram(to_integer(unsigned(address_b)));
-                end if;
+            if rden_b = '1' then
+                q_b_reg <= ram(to_integer(unsigned(address_b)));
             end if;
         end if;
     end process;
