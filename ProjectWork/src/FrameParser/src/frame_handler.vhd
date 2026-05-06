@@ -26,16 +26,17 @@ entity frame_handler is
         --outputs
         data_out    : out std_logic_vector(7 downto 0);
         mac_ready   : out std_logic;
-        dst_mac      : out std_logic_vector(47 downto 0);
-        src_mac      : out std_logic_vector(47 downto 0);
-        crc_valid    : out std_logic
+        dst_mac     : out std_logic_vector(47 downto 0);
+        dst_valid   : out std_logic;                       -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
+        src_mac     : out std_logic_vector(47 downto 0);
+        src_valid   : out std_logic;                        -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
+        crc_valid   : out std_logic
     );
 end entity;
 
 architecture rtl of frame_handler is
     signal sof         : std_logic := '0'; -- Start of Frame
     signal eof         : std_logic := '0'; -- End of Frame
-    signal lof_s       : std_logic := '0';
     signal data        : std_logic_vector(7 downto 0);
     signal fcs_ok      : std_logic := '0';
 begin
@@ -50,10 +51,10 @@ begin
         data_valid => data_valid,           
         sof       => sof,
         eof       => eof,
-        lof       => lof_s,
         dst_mac   => dst_mac,
+        dst_valid => dst_valid,
         src_mac   => src_mac,
-        macs_valid => mac_ready
+        src_valid => src_valid
     );
     
     u_fcscheck : entity work.fcs_check_parallel

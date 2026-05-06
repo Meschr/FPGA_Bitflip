@@ -55,11 +55,11 @@ entity frame_parser is
     data_out   : out  std_logic_vector(7 downto 0);   -- 8-bit data bus 
     sof        : out  std_logic;                      -- Start-of-frame pulse
     eof        : out  std_logic;                      -- End-of-frame pulse end of payload --> fcs follows
-    lof        : out std_logic;                       -- length of frame ???
 
     dst_mac    : out std_logic_vector(47 downto 0);   -- Destination MAC address
+    dst_valid  : out std_logic;                       -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
     src_mac    : out std_logic_vector(47 downto 0);   -- Source MAC address
-    macs_valid  : out std_logic                       -- Macs valid, pulse when dst_mac and src_mac are valid and can be used for MAC learning
+    src_valid  : out std_logic                        -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
   );
 end entity frame_parser;
 
@@ -92,8 +92,8 @@ begin
         data_out   <= (others => '0');
         sof        <= '0';
         eof        <= '0';
-        lof        <= '0';
-        macs_valid <= '0';
+        dst_valid  <= '0';
+        src_valid  <= '0';
         dst_mac    <= (others => '0');
         src_mac    <= (others => '0');
         ethertype  <= (others => '0');
@@ -101,8 +101,8 @@ begin
         data_out <= (others => '0');
         sof <= '0';
         eof <= '0';
-        macs_valid <= '0';
-        lof <= '0';
+        dst_valid  <= '0';
+        src_valid  <= '0';
 
         -- Detect end-of-frame from data_valid falling edge.
         -- This pulse occurs one cycle after the last valid byte.
@@ -152,6 +152,8 @@ begin
               if byte_cnt = 5 then
                 state    <= ST_SRC;
                 byte_cnt <= 0;
+                dst_mac    <= dst_buf;
+                dst_valid  <= '1';
               else
                 byte_cnt <= byte_cnt + 1;
               end if;
@@ -174,6 +176,8 @@ begin
               if byte_cnt = 5 then
                 state    <= ST_ETHER;
                 byte_cnt <= 0;
+                src_valid <= '1';
+                src_mac    <= src_buf;
               end if;
 
             when ST_ETHER =>
@@ -191,11 +195,6 @@ begin
                 else
                   payload_length <= 1500;                  -- Default for EtherType frames
                 end if;
-
-                lof        <= '1';
-                macs_valid <= '1';                        -- Assert macs_valid pulse when both dst_mac and src_mac are valid and can be used for MAC learning.
-                dst_mac    <= dst_buf;
-                src_mac    <= src_buf;
 
                 state      <= ST_PAYLOAD_FCS;
                 byte_cnt   <= 0;
