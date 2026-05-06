@@ -39,118 +39,116 @@ if [ ${#srcFiles[@]} -eq 0 ]; then
     exit 1
 fi
 
-echo -e "${YELLOW}Gefundene Source-Dateien:${NC}"
-for i in "${!srcFiles[@]}"; do
-    echo -e "  ${WHITE}[$((i+1))] $(basename "${srcFiles[$i]}")${NC}"
-done
-echo -e "  ${GREEN}[A] Alle kompilieren${NC}"
-echo ""
-
-read -rp "Welche kompilieren? (Nummer, mehrere mit Komma, oder A fuer alle): " srcChoice
-
 # =====================================================================
 # VHDL-Abhängigkeitsanalyse
 # =====================================================================
 
-# Extrahiert alle Pakete, die eine Datei definiert
-extract_package_names() {
+# Extrahiert alle Entity-Namen, die eine Datei definiert
+extract_entity_names() {
     local file="$1"
-    grep -i "^[[:space:]]*package[[:space:]]" "$file" 2>/dev/null | \
-        sed -E 's/^[[:space:]]*package[[:space:]]+(body[[:space:]]+)?([a-zA-Z0-9_]+).*/\2/' | \
+    grep -i "^[[:space:]]*entity[[:space:]]" "$file" 2>/dev/null | \
+        sed -E 's/^[[:space:]]*entity[[:space:]]+([a-zA-Z0-9_]+).*/\1/' | \
         tr '[:upper:]' '[:lower:]'
 }
 
-# Extrahiert alle Abhängigkeiten (use-Statements) einer Datei
+# Extrahiert alle Abhängigkeiten
 extract_dependencies() {
     local file="$1"
-    grep -i "^[[:space:]]*use[[:space:]]" "$file" 2>/dev/null | \
-        sed -E 's/^[[:space:]]*use[[:space:]]+([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+).*/\2/' | \
-        tr '[:upper:]' '[:lower:]' | sort | uniq
+    (
+        # Match: entity work.entity_name
+        grep -i "entity[[:space:]]*work\." "$file" 2>/dev/null | \
+            sed -E 's/.*entity[[:space:]]*work\.([a-zA-Z0-9_]+).*/\1/'
+        
+        # Match: instance_name : component_name port map
+        grep -iE "[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*[a-zA-Z0-9_]+[[:space:]]+(port|generic)[[:space:]]*map" "$file" 2>/dev/null | \
+            sed -E 's/[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*([a-zA-Z0-9_]+).*/\1/'
+    ) | tr '[:upper:]' '[:lower:]' | sort | uniq
 }
 
-# Topologische Sortierung: kompiliert Dateien in richtiger Abhängigkeitsreihenfolge
-topological_sort() {
-    declare -A packages
-    declare -A dependencies
-    declare -a ordered=()
-    declare -a remaining=("$@")
-    local iterations=0
-    local max_iterations=${#remaining[@]}
+# Build entity->file map and find dependencies
+declare -A entity_to_file
+declare -A entity_dependencies
 
-    # Schritt 1: Alle Pakete sammeln
-    for file in "${remaining[@]}"; do
-        for pkg in $(extract_package_names "$file"); do
-            packages["$pkg"]="$file"
+echo -e "${CYAN}=== Analysiere Entities und Abhängigkeiten ===${NC}"
+for file in "${srcFiles[@]}"; do
+    for entity in $(extract_entity_names "$file"); do
+        entity_to_file["$entity"]="$file"
+        echo -e "  ${GRAY}Entity '$entity' in $(basename "$file")${NC}"
+    done
+done
+
+echo ""
+for file in "${srcFiles[@]}"; do
+    deps=$(extract_dependencies "$file")
+    if [ -n "$deps" ]; then
+        echo -e "  ${GRAY}$(basename "$file") depends on:${NC}"
+        for dep in $deps; do
+            echo -e "    ${GRAY}→ $dep${NC}"
         done
-    done
-
-    # Schritt 2: Abhängigkeiten sammeln
-    for file in "${remaining[@]}"; do
-        dependencies["$file"]="$(extract_dependencies "$file")"
-    done
-
-    # Schritt 3: Topologisch sortieren
-    while [ ${#remaining[@]} -gt 0 ] && [ $iterations -lt $((max_iterations + 10)) ]; do
-        iterations=$((iterations + 1))
-        local progress=0
-
-        for i in "${!remaining[@]}"; do
-            local file="${remaining[$i]}"
-            local deps="${dependencies[$file]}"
-            local can_compile=1
-
-            # Prüfe ob alle Abhängigkeiten erfüllt sind
-            for dep in $deps; do
-                if [[ -n "${packages[$dep]}" ]]; then
-                    local dep_file="${packages[$dep]}"
-                    # Prüfe ob dep_file schon kompiliert ist
-                    local found=0
-                    for compiled in "${ordered[@]}"; do
-                        [[ "$compiled" == "$dep_file" ]] && found=1 && break
-                    done
-                    if [ $found -eq 0 ]; then
-                        can_compile=0
-                        break
-                    fi
-                fi
-            done
-
-            if [ $can_compile -eq 1 ]; then
-                ordered+=("$file")
-                unset 'remaining[$i]'
-                progress=1
-            fi
-        done
-
-        remaining=("${remaining[@]}")  # Kompakte Array ohne Lücken
-
-        if [ $progress -eq 0 ] && [ ${#remaining[@]} -gt 0 ]; then
-            # Keine Fortschritte → zirkuläre Abhängigkeiten? Restliche anhängen
-            echo -e "${YELLOW}  Warnung: Ggfs. zirkuläre Abhängigkeiten. Kompiliere Rest in Reihenfolge...${NC}" >&2
-            ordered+=("${remaining[@]}")
-            remaining=()
-        fi
-    done
-
-    printf '%s\n' "${ordered[@]}"
-}
-
-selectedSrc=()
-
-if [[ "$srcChoice" =~ ^[Aa]$ ]]; then
-    # Automatische topologische Sortierung
-    echo -e "${CYAN}  Analysiere Abhängigkeiten...${NC}"
-    mapfile -t selectedSrc < <(topological_sort "${srcFiles[@]}")
-    if [ ${#selectedSrc[@]} -eq 0 ]; then
-        selectedSrc=("${srcFiles[@]}")
+        entity_dependencies["$file"]="$deps"
     fi
-else
-    IFS=',' read -ra indices <<< "$srcChoice"
-    for idx in "${indices[@]}"; do
-        idx=$(echo "$idx" | tr -d ' ')
-        selectedSrc+=("${srcFiles[$((idx-1))]}")
-    done
-fi
+done
+
+# Show available top entities
+echo ""
+echo -e "${YELLOW}Verfuegbare Top-Level Entities:${NC}"
+declare -a entities=()
+for entity in "${!entity_to_file[@]}"; do
+    entities+=("$entity")
+done
+
+# Sort entities
+IFS=$'\n' sorted_entities=($(sort <<<"${entities[*]}"))
+unset IFS
+
+for i in "${!sorted_entities[@]}"; do
+    entity="${sorted_entities[$i]}"
+    file="${entity_to_file[$entity]}"
+    echo -e "  ${WHITE}[$((i+1))] $entity ($(basename "$file"))${NC}"
+done
+echo ""
+
+read -rp "Welche Top-Entity kompilieren? (Nummer): " entityChoice
+entityIndex=$((entityChoice - 1))
+selected_entity="${sorted_entities[$entityIndex]}"
+
+# Recursively find all dependencies
+declare -a selectedSrc=()
+declare -A processed_entities=()
+declare -A added_files=()
+
+add_with_dependencies() {
+    local entity="$1"
+    entity=$(echo "$entity" | tr '[:upper:]' '[:lower:]')
+    
+    # Already processed?
+    if [[ "${processed_entities[$entity]}" == "1" ]]; then
+        return
+    fi
+    processed_entities["$entity"]="1"
+    
+    # Find file for this entity
+    if [[ -n "${entity_to_file[$entity]}" ]]; then
+        local file="${entity_to_file[$entity]}"
+        
+        # Recursively add dependencies first
+        local deps="${entity_dependencies[$file]}"
+        for dep in $deps; do
+            add_with_dependencies "$dep"
+        done
+        
+        # Add this file (if not already added)
+        if [[ "${added_files[$file]}" != "1" ]]; then
+            selectedSrc+=("$file")
+            added_files["$file"]="1"
+            echo -e "  ${GREEN}Added: $entity from $(basename "$file")${NC}"
+        fi
+    fi
+}
+
+echo ""
+echo -e "${CYAN}=== Bestimme Abhängigkeiten von '$selected_entity' ===${NC}"
+add_with_dependencies "$selected_entity"
 
 # =====================================================================
 # Schritt 2: Source-Dateien kompilieren

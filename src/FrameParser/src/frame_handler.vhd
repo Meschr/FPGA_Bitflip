@@ -47,7 +47,7 @@ begin
         reset     => reset,
             
         data_in   => data_in,
-        data_out  => data_out,
+        data_out  => data,
         data_valid => data_valid,           
         sof       => sof,
         eof       => eof,
@@ -68,4 +68,5 @@ begin
         fcs_ok         => fcs_ok
     );
 
+    data_out <= data;
 end architecture;
