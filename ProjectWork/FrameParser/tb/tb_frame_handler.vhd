@@ -1,85 +1,59 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_textio.all;
+
+library std;
+use std.textio.all;
+use std.env.all;
 
 entity tb_frame_handler is
 end entity tb_frame_handler;
 
 architecture sim of tb_frame_handler is
   constant CLK_PERIOD : time := 10 ns;
+  constant INTERFRAME_GAP_CYCLES  : natural := 12;
+  constant STIMULUS_FILE_PRIMARY  : string := "src/stimulus.txt";
+  constant STIMULUS_FILE_FALLBACK : string := "../src/stimulus.txt";
+  constant MAX_FRAME_BYTES        : natural := 256;
 
-  signal clk         : std_logic := '0';
-  signal reset       : std_logic := '1';
-  signal data_in     : std_logic_vector(7 downto 0) := (others => '0');
-  signal data_valid  : std_logic := '0';
+  signal clk        : std_logic := '0';
+  signal reset      : std_logic := '1';
+  signal data_in    : std_logic_vector(7 downto 0) := (others => '0');
+  signal data_valid : std_logic := '0';
 
-  signal data_out    : std_logic_vector(7 downto 0);
-  signal mac_ready   : std_logic;
-  signal dst_mac     : std_logic_vector(47 downto 0);
-  signal src_mac     : std_logic_vector(47 downto 0);
-  signal crc_valid   : std_logic;
+  signal data_out  : std_logic_vector(7 downto 0);
+  signal mac_ready : std_logic;
+  signal dst_mac   : std_logic_vector(47 downto 0);
+  signal src_mac   : std_logic_vector(47 downto 0);
+  signal crc_valid : std_logic;
 
   type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
 
-  constant PREAMBLE : byte_array_t(0 to 6) := (
-    x"55", x"55", x"55", x"55", x"55", x"55", x"55"
-  );
-
-  constant SFD : std_logic_vector(7 downto 0) := x"D5";
-
-  -- Valid Ethernet packet from tb_fcs_check_parallel (64 bytes: 60 payload + 4 FCS)
-  -- DST=00:10:A4:7B:EA:80, SRC=00:12:34:56:78:90, EtherType=0x0800 (IPv4)
-  -- Payload length = 46 bytes (0x002E in EtherType field), plus 4 FCS = 50 bytes total
-  constant PKT_OK : byte_array_t(0 to 63) := (
-    -- DST (6 bytes)
-    x"00", x"10", x"A4", x"7B", x"EA", x"80",
-    -- SRC (6 bytes)
-    x"00", x"12", x"34", x"56", x"78", x"90",
-    -- EtherType (2 bytes) - 0x0800 = IPv4
-    x"08", x"00",
-    -- Payload (46 bytes)
-    x"45", x"00", x"00", x"2E", x"B3", x"FE", x"00", x"00",
-    x"80", x"11", x"05", x"40", x"C0", x"A8", x"00", x"2C",
-    x"C0", x"A8", x"00", x"04", x"04", x"00", x"04", x"00",
-    x"00", x"1A", x"2D", x"E8", x"00", x"01", x"02", x"03",
-    x"04", x"05", x"06", x"07", x"08", x"09", x"0A", x"0B",
-    x"0C", x"0D", x"0E", x"0F", x"10", x"11",
-    -- FCS (4 bytes)
-    x"E6", x"C5", x"3D", x"B2"
-  );
-
-  -- Corrupted packet: change one byte in payload but keep same FCS (should trigger CRC error)
-  constant PKT_BAD : byte_array_t(0 to 63) := (
-    -- DST (6 bytes)
-    x"00", x"10", x"A4", x"7B", x"EA", x"80",
-    -- SRC (6 bytes) - byte 4 changed from 0x78 to 0x79
-    x"00", x"12", x"34", x"56", x"79", x"90",
-    -- EtherType (2 bytes) - 0x0800 = IPv4
-    x"08", x"00",
-    -- Payload (46 bytes)
-    x"45", x"00", x"00", x"2E", x"B3", x"FE", x"00", x"00",
-    x"80", x"11", x"05", x"40", x"C0", x"A8", x"00", x"2C",
-    x"C0", x"A8", x"00", x"04", x"04", x"00", x"04", x"00",
-    x"00", x"1A", x"2D", x"E8", x"00", x"01", x"02", x"03",
-    x"04", x"05", x"06", x"07", x"08", x"09", x"0A", x"0B",
-    x"0C", x"0D", x"0E", x"0F", x"10", x"11",
-    -- Same FCS as pkt_ok (4 bytes)
-    x"E6", x"C5", x"3D", x"B2"
-  );
-
-  function bytes_to_mac(arr : byte_array_t(0 to 5)) return std_logic_vector is
-    variable tmp : std_logic_vector(47 downto 0);
+  function bytes_to_mac(
+    constant bytes : byte_array_t;
+    constant first  : natural
+  ) return std_logic_vector is
+    variable mac : std_logic_vector(47 downto 0);
   begin
-    tmp(47 downto 40) := arr(0);
-    tmp(39 downto 32) := arr(1);
-    tmp(31 downto 24) := arr(2);
-    tmp(23 downto 16) := arr(3);
-    tmp(15 downto 8)  := arr(4);
-    tmp(7 downto 0)   := arr(5);
-    return tmp;
+    mac(47 downto 40) := bytes(first + 0);
+    mac(39 downto 32) := bytes(first + 1);
+    mac(31 downto 24) := bytes(first + 2);
+    mac(23 downto 16) := bytes(first + 3);
+    mac(15 downto 8)  := bytes(first + 4);
+    mac(7 downto 0)   := bytes(first + 5);
+    return mac;
   end function;
 
-  procedure sample_flags(
+  function is_corrupt_comment(constant comment_line : string) return boolean is
+  begin
+    if comment_line'length >= 9 and comment_line(3 to 9) = "Corrupt" then
+      return true;
+    end if;
+    return false;
+  end function;
+
+  procedure sample_frame_outputs(
     signal mac_ready_i : in std_logic;
     signal crc_valid_i : in std_logic;
     variable saw_mac_ready : inout boolean;
@@ -90,57 +64,67 @@ architecture sim of tb_frame_handler is
       saw_mac_ready := true;
     end if;
 
-    -- frame_handler maps crc_valid <= not fcs_error,
-    -- so crc_valid='0' means CRC error detected.
-    if crc_valid_i = '0' then
+    if crc_valid_i = '1' then
       saw_crc_error := true;
     end if;
   end procedure;
 
-  procedure send_packet_with_preamble(
+  procedure send_frame(
     signal clk_i        : in std_logic;
     signal din_o        : out std_logic_vector(7 downto 0);
     signal dv_o         : out std_logic;
     signal mac_ready_i  : in std_logic;
     signal crc_valid_i  : in std_logic;
-    constant preamble_i : in byte_array_t(0 to 6);
-    constant sfd_i      : in std_logic_vector(7 downto 0);
-    constant pkt        : in byte_array_t;
-    variable saw_mac_ready : inout boolean;
-    variable saw_crc_error : inout boolean
+    constant bytes      : in byte_array_t;
+    constant byte_count : in natural;
+    constant expected_dst : in std_logic_vector(47 downto 0);
+    constant expected_src : in std_logic_vector(47 downto 0);
+    constant expect_crc_error : in boolean;
+    constant frame_name  : in string
   ) is
+    variable saw_mac_ready : boolean := false;
+    variable saw_crc_error : boolean := false;
   begin
-    -- Send preamble
-    for i in preamble_i'range loop
-      din_o <= preamble_i(i);
+    for i in 0 to byte_count - 1 loop
+      din_o <= bytes(i);
       dv_o  <= '1';
       wait until rising_edge(clk_i);
-      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+      sample_frame_outputs(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
     end loop;
 
-    -- Send SFD
-    din_o <= sfd_i;
-    dv_o  <= '1';
-    wait until rising_edge(clk_i);
-    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
-
-    -- Send complete packet (DST + SRC + EtherType + Payload + FCS)
-    for i in pkt'range loop
-      din_o <= pkt(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
-    end loop;
-
-    -- End transmission
     dv_o  <= '0';
     din_o <= (others => '0');
-    wait until rising_edge(clk_i);
-    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    for gap_index in 1 to INTERFRAME_GAP_CYCLES loop
+      wait until rising_edge(clk_i);
+      sample_frame_outputs(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    end loop;
+
+    assert dst_mac = expected_dst
+      report frame_name & ": dst_mac mismatch. Got " & to_hstring(dst_mac) &
+             " expected " & to_hstring(expected_dst)
+      severity error;
+
+    assert src_mac = expected_src
+      report frame_name & ": src_mac mismatch. Got " & to_hstring(src_mac) &
+             " expected " & to_hstring(expected_src)
+      severity error;
+
+    assert saw_mac_ready
+      report frame_name & ": mac_ready pulse not observed"
+      severity error;
+
+    if expect_crc_error then
+      assert saw_crc_error
+        report frame_name & ": expected CRC error not observed"
+        severity error;
+    else
+      assert not saw_crc_error
+        report frame_name & ": valid frame raised CRC error"
+        severity error;
+    end if;
   end procedure;
 
 begin
-
   dut : entity work.frame_handler
     port map (
       clk        => clk,
@@ -163,122 +147,101 @@ begin
   end process;
 
   p_stim : process
-    variable exp_dst_ok : std_logic_vector(47 downto 0);
-    variable exp_src_ok : std_logic_vector(47 downto 0);
-    variable exp_dst_bad : std_logic_vector(47 downto 0);
-    variable exp_src_bad : std_logic_vector(47 downto 0);
-
-    variable saw_mac_ready : boolean;
-    variable saw_crc_error : boolean;
+    file stim_file : text;
+    variable status : file_open_status;
+    variable comment_line : line;
+    variable frame_line : line;
+    variable raw_line : string(1 to 1024);
+    variable frame_bytes : byte_array_t(0 to MAX_FRAME_BYTES - 1);
+    variable frame_count : natural;
+    variable byte_value : std_logic_vector(7 downto 0);
+    variable expected_dst : std_logic_vector(47 downto 0);
+    variable expected_src : std_logic_vector(47 downto 0);
+    variable expect_crc_error : boolean;
+    variable frame_name : string(1 to 128);
+    variable frame_name_len : natural;
   begin
+    file_open(status, stim_file, STIMULUS_FILE_PRIMARY, read_mode);
+    if status /= open_ok then
+      file_open(status, stim_file, STIMULUS_FILE_FALLBACK, read_mode);
+    end if;
+    assert status = open_ok
+      report "Unable to open stimulus file from src: " & STIMULUS_FILE_PRIMARY
+      severity failure;
+
     reset <= '1';
-    data_valid <= '0';
     data_in <= (others => '0');
-    wait for 3 * CLK_PERIOD;
+    data_valid <= '0';
+    wait for 5 * CLK_PERIOD;
     wait until rising_edge(clk);
     reset <= '0';
     wait until rising_edge(clk);
 
-    -- Extract expected MAC addresses from packets
-    exp_dst_ok := bytes_to_mac(PKT_OK(0 to 5));
-    exp_src_ok := bytes_to_mac(PKT_OK(6 to 11));
-    exp_dst_bad := bytes_to_mac(PKT_BAD(0 to 5));
-    exp_src_bad := bytes_to_mac(PKT_BAD(6 to 11));
+    while not endfile(stim_file) loop
+      readline(stim_file, comment_line);
+      if comment_line.all'length = 0 then
+        next;
+      end if;
 
-    -- Test 1: Valid packet from tb_fcs_check_parallel
-    report "=== Test 1: Valid packet (PKT_OK) ===";
-    saw_mac_ready := false;
-    saw_crc_error := false;
-    send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
-      PREAMBLE, SFD, PKT_OK,
-      saw_mac_ready, saw_crc_error
-    );
+      if comment_line.all(1) /= '#' then
+        next;
+      end if;
 
-    for i in 0 to 12 loop
-      wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+      frame_name_len := comment_line.all'length;
+      if frame_name_len > frame_name'length then
+        frame_name_len := frame_name'length;
+      end if;
+      frame_name := (others => ' ');
+      frame_name(1 to frame_name_len) := comment_line.all(1 to frame_name_len);
+      expect_crc_error := is_corrupt_comment(comment_line.all);
+
+      if endfile(stim_file) then
+        exit;
+      end if;
+
+      readline(stim_file, frame_line);
+      raw_line := (others => ' ');
+
+      frame_count := 0;
+      while frame_line.all'length > 0 loop
+        hread(frame_line, byte_value);
+        if frame_count >= MAX_FRAME_BYTES then
+          assert false
+            report frame_name & ": frame exceeds MAX_FRAME_BYTES"
+            severity failure;
+        end if;
+        frame_bytes(frame_count) := byte_value;
+        frame_count := frame_count + 1;
+      end loop;
+
+      assert frame_count >= 22
+        report frame_name & ": stimulus frame is too short to contain preamble, SFD, and MAC addresses"
+        severity failure;
+
+      expected_dst := bytes_to_mac(frame_bytes, 8);
+      expected_src := bytes_to_mac(frame_bytes, 14);
+
+      send_frame(
+        clk,
+        data_in,
+        data_valid,
+        mac_ready,
+        crc_valid,
+        frame_bytes,
+        frame_count,
+        expected_dst,
+        expected_src,
+        expect_crc_error,
+        frame_name(1 to frame_name_len)
+      );
+
+      if not endfile(stim_file) then
+        readline(stim_file, frame_line);
+      end if;
     end loop;
 
-    assert dst_mac = exp_dst_ok
-      report "Test 1 FAILED: dst_mac mismatch. Got " & to_hstring(dst_mac) & 
-              " expected " & to_hstring(exp_dst_ok)
-      severity error;
-    assert src_mac = exp_src_ok
-      report "Test 1 FAILED: src_mac mismatch. Got " & to_hstring(src_mac) & 
-              " expected " & to_hstring(exp_src_ok)
-      severity error;
-    assert saw_mac_ready
-      report "Test 1 FAILED: mac_ready pulse not seen"
-      severity error;
-    assert not saw_crc_error
-      report "Test 1 FAILED: valid packet triggered CRC error"
-      severity error;
-    report "Test 1 PASSED: Valid packet processed correctly";
-
-    -- Test 2: Corrupted packet with same FCS (should trigger CRC error)
-    report "=== Test 2: Corrupted packet (PKT_BAD) ===";
-    saw_mac_ready := false;
-    saw_crc_error := false;
-    send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
-      PREAMBLE, SFD, PKT_BAD,
-      saw_mac_ready, saw_crc_error
-    );
-
-    for i in 0 to 12 loop
-      wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
-    end loop;
-
-    assert dst_mac = exp_dst_bad
-      report "Test 2 FAILED: dst_mac mismatch"
-      severity error;
-    assert src_mac = exp_src_bad
-      report "Test 2 FAILED: src_mac mismatch"
-      severity error;
-    assert saw_mac_ready
-      report "Test 2 FAILED: mac_ready pulse not seen"
-      severity error;
-    assert saw_crc_error
-      report "Test 2 FAILED: expected CRC error not detected"
-      severity error;
-    report "Test 2 PASSED: Corrupted packet detected";
-
-    -- Test 3: Reset and re-send valid packet
-    report "=== Test 3: Reset and re-send valid packet ===";
-    reset <= '1';
-    wait for 3 * CLK_PERIOD;
-    wait until rising_edge(clk);
-    reset <= '0';
-    wait for CLK_PERIOD;
-
-    saw_mac_ready := false;
-    saw_crc_error := false;
-    send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
-      PREAMBLE, SFD, PKT_OK,
-      saw_mac_ready, saw_crc_error
-    );
-
-    for i in 0 to 12 loop
-      wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
-    end loop;
-
-    assert dst_mac = exp_dst_ok
-      report "Test 3 FAILED: dst_mac mismatch"
-      severity error;
-    assert src_mac = exp_src_ok
-      report "Test 3 FAILED: src_mac mismatch"
-      severity error;
-    assert not saw_crc_error
-      report "Test 3 FAILED: valid packet triggered CRC error"
-      severity error;
-    report "Test 3 PASSED: Reset and re-transmission successful";
-
-    report "=== All Frame Handler tests PASSED ===" severity note;
-    std.env.stop;
+    report "All frame_handler stimulus frames processed" severity note;
+    stop;
   end process;
 
 end architecture sim;

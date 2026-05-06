@@ -17,6 +17,7 @@ use ieee.numeric_std.all;
 entity frame_handler is
     port (
         clk   : in std_logic;
+        
         reset : in std_logic;
         
         -- inputs
