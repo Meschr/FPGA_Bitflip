@@ -23,6 +23,12 @@ architecture rtl of tb_mac_top is
     constant MAC_P3_A : std_logic_vector(47 downto 0) := x"0011223366CC";
     constant MAC_P3_B : std_logic_vector(47 downto 0) := x"112233447755";
     
+    -- One-hot encoded port outputs (4-bit vectors)
+    constant PORT_0_ONEHOT : std_logic_vector(3 downto 0) := "0001";
+    constant PORT_1_ONEHOT : std_logic_vector(3 downto 0) := "0010";
+    constant PORT_2_ONEHOT : std_logic_vector(3 downto 0) := "0100";
+    constant PORT_3_ONEHOT : std_logic_vector(3 downto 0) := "1000";
+    
     -- Signals
     signal clk : std_logic := '0';
     signal rst : std_logic := '0';
@@ -37,7 +43,7 @@ architecture rtl of tb_mac_top is
     signal dst_req0, dst_req1, dst_req2, dst_req3     : std_logic;
     
     -- Output signals (Port 0-3)
-    signal dst0, dst1, dst2, dst3                     : unsigned(1 downto 0);
+    signal dst0, dst1, dst2, dst3                     : std_logic_vector(3 downto 0);
     signal dst_valid0, dst_valid1, dst_valid2, dst_valid3 : std_logic;
     
     -- Simulation control
@@ -237,10 +243,10 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid0 = '1' then
-            if dst0 = 0 then
+            if dst0 = PORT_0_ONEHOT then
                 report "  Port 0 lookup PASS: Got port 0 (expected port 0)" severity NOTE;
             else
-                report "  Port 0 lookup FAIL: Got port " & integer'image(to_integer(dst0)) & " (expected 0)" severity WARNING;
+                report "  Port 0 lookup FAIL: Got one-hot " & to_string(dst0) & " (expected " & to_string(PORT_0_ONEHOT) & ")" severity WARNING;
             end if;
         else
             report "  Port 0 lookup: No match (MAC not found in table)" severity WARNING;
@@ -260,10 +266,10 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid1 = '1' then
-            if dst1 = 1 then
+            if dst1 = PORT_1_ONEHOT then
                 report "  Port 1 lookup PASS: Got port 1 (expected port 1)" severity NOTE;
             else
-                report "  Port 1 lookup FAIL: Got port " & integer'image(to_integer(dst1)) & " (expected 1)" severity WARNING;
+                report "  Port 1 lookup FAIL: Got one-hot " & to_string(dst1) & " (expected " & to_string(PORT_1_ONEHOT) & ")" severity WARNING;
             end if;
         else
             report "  Port 1 lookup: No match (MAC not found in table)" severity WARNING;
@@ -283,10 +289,10 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid2 = '1' then
-            if dst2 = 2 then
+            if dst2 = PORT_2_ONEHOT then
                 report "  Port 2 lookup PASS: Got port 2 (expected port 2)" severity NOTE;
             else
-                report "  Port 2 lookup FAIL: Got port " & integer'image(to_integer(dst2)) & " (expected 2)" severity WARNING;
+                report "  Port 2 lookup FAIL: Got one-hot " & to_string(dst2) & " (expected " & to_string(PORT_2_ONEHOT) & ")" severity WARNING;
             end if;
         else
             report "  Port 2 lookup: No match (MAC not found in table)" severity WARNING;
@@ -307,10 +313,10 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid3 = '1' then
-            if dst3 = 3 then
+            if dst3 = PORT_3_ONEHOT then
                 report "  Port 3 lookup PASS: Got port 3 (expected port 3)" severity NOTE;
             else
-                report "  Port 3 lookup FAIL: Got port " & integer'image(to_integer(dst3)) & " (expected 3)" severity WARNING;
+                report "  Port 3 lookup FAIL: Got one-hot " & to_string(dst3) & " (expected " & to_string(PORT_3_ONEHOT) & ")" severity WARNING;
             end if;
         else
             report "  Port 3 lookup: No match (MAC not found in table)" severity WARNING;
@@ -337,8 +343,8 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid0 = '1' then
-            report "  Port 0 lookup of Port 1 MAC: Got port " & integer'image(to_integer(dst0)) & " (expected 1)" severity NOTE;
-            if dst0 = 1 then
+            report "  Port 0 lookup of Port 1 MAC: Got one-hot " & to_string(dst0) & " (expected " & to_string(PORT_1_ONEHOT) & ")" severity NOTE;
+            if dst0 = PORT_1_ONEHOT then
                 report "    PASS: Correct cross-port lookup" severity NOTE;
             else
                 report "    FAIL: Wrong port returned" severity WARNING;
@@ -390,11 +396,11 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid2 = '1' then
-            if dst2 = 2 then
+            if dst2 = PORT_2_ONEHOT then
                 report "  After 100-clock aging: First Port 2 MAC (0x" & to_hstring(MAC_P2_A) & ") still accessible" severity NOTE;
                 report "    PASS: MAC learned on Port 2 is still in table after aging" severity NOTE;
             else
-                report "    FAIL: Got port " & integer'image(to_integer(dst2)) & " instead of 2" severity WARNING;
+                report "    FAIL: Got one-hot " & to_string(dst2) & " instead of " & to_string(PORT_2_ONEHOT) severity WARNING;
             end if;
         else
             report "  After 100-clock aging: First Port 2 MAC NO LONGER in table (expired)" severity NOTE;
@@ -414,11 +420,11 @@ begin
         wait until rising_edge(clk);
         
         if dst_valid2 = '1' then
-            if dst2 = 2 then
+            if dst2 = PORT_2_ONEHOT then
                 report "  After learning: Second Port 2 MAC (0x" & to_hstring(MAC_P2_B) & ") found at port 2" severity NOTE;
                 report "    PASS: Newly learned MAC is in table" severity NOTE;
             else
-                report "    FAIL: Got port " & integer'image(to_integer(dst2)) & " instead of 2" severity WARNING;
+                report "    FAIL: Got one-hot " & to_string(dst2) & " instead of " & to_string(PORT_2_ONEHOT) severity WARNING;
             end if;
         else
             report "  Second Port 2 MAC not found" severity WARNING;
@@ -492,7 +498,7 @@ begin
         wait until rising_edge(clk);
         wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
-        if dst_valid0 = '1' and dst0 = 0 then
+        if dst_valid0 = '1' and dst0 = PORT_0_ONEHOT then
             report "  Port 0 MAC B: PASS" severity NOTE;
         else
             report "  Port 0 MAC B: FAIL" severity WARNING;
@@ -509,7 +515,7 @@ begin
         wait until rising_edge(clk);
         wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
-        if dst_valid1 = '1' and dst1 = 1 then
+        if dst_valid1 = '1' and dst1 = PORT_1_ONEHOT then
             report "  Port 1 MAC B: PASS" severity NOTE;
         else
             report "  Port 1 MAC B: FAIL" severity WARNING;
@@ -526,7 +532,7 @@ begin
         wait until rising_edge(clk);
         wait for CLK_PERIOD * 60;
         wait until rising_edge(clk);
-        if dst_valid3 = '1' and dst3 = 3 then
+        if dst_valid3 = '1' and dst3 = PORT_3_ONEHOT then
             report "  Port 3 MAC B: PASS" severity NOTE;
         else
             report "  Port 3 MAC B: FAIL" severity WARNING;

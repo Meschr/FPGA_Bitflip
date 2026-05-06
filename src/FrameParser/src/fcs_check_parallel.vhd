@@ -33,7 +33,7 @@ begin
 ------------------------------------------------------------------
 -- Combinational CRC next-state (8 bits per cycle, MSB-first)
 ------------------------------------------------------------------
-crc_comb : process(crc_reg, data_in, head_cnt, end_of_frame, in_fcs, bit_valid)
+crc_comb : process(crc_reg, data_in, head_cnt, bit_valid)
   variable c        : std_logic_vector(31 downto 0);
   variable feedback : std_logic;
   variable din_eff  : std_logic_vector(7 downto 0);

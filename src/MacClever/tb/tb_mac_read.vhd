@@ -9,6 +9,17 @@ architecture rtl of tb_mac_read is
     constant ADDR_WIDTH : positive := 13;
     constant DATA_WIDTH : positive := 8;
     constant CLK_PERIOD : time := 8 ns; -- 125 MHz
+    
+    -- One-hot encoded port outputs (4-bit vectors - used by mac_read output)
+    constant PORT_0_ONEHOT : std_logic_vector(3 downto 0) := "0001";
+    constant PORT_1_ONEHOT : std_logic_vector(3 downto 0) := "0010";
+    
+    -- BRAM data encoding: 2-bit port in bits[1:0], validity in bits[7:2]
+    -- Bits 7-2: validity/reserved (set to "111111" for valid, "000000" for invalid)
+    -- Bits 1-0: 2-bit port encoding (00=port0, 01=port1, 10=port2, 11=port3)
+    constant BRAM_VALID_DEST_0 : std_logic_vector(7 downto 0) := "11111100";  -- valid, port 0 (2-bit: 00)
+    constant BRAM_VALID_DEST_1 : std_logic_vector(7 downto 0) := "11111101";  -- valid, port 1 (2-bit: 01)
+    constant BRAM_INVALID      : std_logic_vector(7 downto 0) := "00000000";  -- invalid
 
     signal clk : std_logic := '0';
     signal rst : std_logic := '0';
@@ -33,14 +44,14 @@ architecture rtl of tb_mac_read is
     signal mac_addr3 : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
     signal mac_req3  : std_logic := '0';
 
-    -- mac_read outputs
-    signal dest0  : unsigned(1 downto 0);
+    -- mac_read outputs (now using 4-bit one-hot encoding)
+    signal dest0  : std_logic_vector(3 downto 0);
     signal valid0 : std_logic;
-    signal dest1  : unsigned(1 downto 0);
+    signal dest1  : std_logic_vector(3 downto 0);
     signal valid1 : std_logic;
-    signal dest2  : unsigned(1 downto 0);
+    signal dest2  : std_logic_vector(3 downto 0);
     signal valid2 : std_logic;
-    signal dest3  : unsigned(1 downto 0);
+    signal dest3  : std_logic_vector(3 downto 0);
     signal valid3 : std_logic;
 
     -- cycle counter
@@ -133,23 +144,23 @@ begin
         -- Pre-load BRAM using port B
         -- Addr 100: invalid (all zeros)
         bram_addr_b <= std_logic_vector(to_unsigned(100, ADDR_WIDTH));
-        bram_data_b <= (others => '0');
+        bram_data_b <= BRAM_INVALID;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
         bram_wren_b <= '0';
         wait until rising_edge(clk);
 
-        -- Addr 200: valid entry dest=0 (0xFC)
+        -- Addr 200: valid entry dest=0 (one-hot port 0)
         bram_addr_b <= std_logic_vector(to_unsigned(200, ADDR_WIDTH));
-        bram_data_b <= "11111100";
+        bram_data_b <= BRAM_VALID_DEST_0;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
         bram_wren_b <= '0';
         wait until rising_edge(clk);
 
-        -- Addr 201: valid entry dest=1 (0xFD)
+        -- Addr 201: valid entry dest=1 (one-hot port 1)
         bram_addr_b <= std_logic_vector(to_unsigned(201, ADDR_WIDTH));
-        bram_data_b <= "11111101";
+        bram_data_b <= BRAM_VALID_DEST_1;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
         bram_wren_b <= '0';
@@ -178,10 +189,10 @@ begin
         mac_req1 <= '0';
         wait for CLK_PERIOD * 2;
 
-        if valid1 = '1' and dest1 = 0 then
-            report "PASS: addr 200 produced valid1=1 dest1=0 as expected" severity NOTE;
+        if valid1 = '1' and dest1 = PORT_0_ONEHOT then
+            report "PASS: addr 200 produced valid1=1 dest1=" & to_string(PORT_0_ONEHOT) & " as expected" severity NOTE;
         else
-            report "FAIL: addr 200 mismatch: valid1=" & std_logic'image(valid1) & " dest1=" & integer'image(to_integer(dest1)) severity WARNING;
+            report "FAIL: addr 200 mismatch: valid1=" & std_logic'image(valid1) & " dest1=" & to_string(dest1) severity WARNING;
         end if;
 
         -- PHASE 3: Request address 201 (valid dest 1)
@@ -191,10 +202,10 @@ begin
         mac_req2 <= '0';
         wait for CLK_PERIOD * 2;
 
-        if valid2 = '1' and dest2 = 1 then
-            report "PASS: addr 201 produced valid2=1 dest2=1 as expected" severity NOTE;
+        if valid2 = '1' and dest2 = PORT_1_ONEHOT then
+            report "PASS: addr 201 produced valid2=1 dest2=" & to_string(PORT_1_ONEHOT) & " as expected" severity NOTE;
         else
-            report "FAIL: addr 201 mismatch: valid2=" & std_logic'image(valid2) & " dest2=" & integer'image(to_integer(dest2)) severity WARNING;
+            report "FAIL: addr 201 mismatch: valid2=" & std_logic'image(valid2) & " dest2=" & to_string(dest2) severity WARNING;
         end if;
 
         report "============================================" severity NOTE;

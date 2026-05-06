@@ -25,7 +25,6 @@ entity frame_handler is
 
         --outputs
         data_out    : out std_logic_vector(7 downto 0);
-        mac_ready   : out std_logic;
         dst_mac     : out std_logic_vector(47 downto 0);
         dst_valid   : out std_logic;                       -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
         src_mac     : out std_logic_vector(47 downto 0);
@@ -47,7 +46,7 @@ begin
         reset     => reset,
             
         data_in   => data_in,
-        data_out  => data,
+        data_out  => data_out,
         data_valid => data_valid,           
         sof       => sof,
         eof       => eof,

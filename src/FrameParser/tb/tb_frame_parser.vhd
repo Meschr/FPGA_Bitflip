@@ -261,10 +261,8 @@ begin
       data_out        => data_out,
       sof             => sof,
       eof             => eof,
-      lof             => lof,
       dst_mac         => dst_mac,
-      src_mac         => src_mac,
-      macs_valid      => macs_valid
+      src_mac         => src_mac
     );
 
   p_clk : process

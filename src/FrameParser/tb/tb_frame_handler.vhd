@@ -14,9 +14,10 @@ architecture sim of tb_frame_handler is
   signal data_valid  : std_logic := '0';
 
   signal data_out    : std_logic_vector(7 downto 0);
-  signal mac_ready   : std_logic;
   signal dst_mac     : std_logic_vector(47 downto 0);
+  signal dst_valid   : std_logic;
   signal src_mac     : std_logic_vector(47 downto 0);
+  signal src_valid   : std_logic;
   signal crc_valid   : std_logic;
 
   type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
@@ -80,14 +81,15 @@ architecture sim of tb_frame_handler is
   end function;
 
   procedure sample_flags(
-    signal mac_ready_i : in std_logic;
+    signal dst_valid_i : in std_logic;
+    signal src_valid_i : in std_logic;
     signal crc_valid_i : in std_logic;
-    variable saw_mac_ready : inout boolean;
+    variable saw_mac_valid : inout boolean;
     variable saw_crc_error : inout boolean
   ) is
   begin
-    if mac_ready_i = '1' then
-      saw_mac_ready := true;
+    if dst_valid_i = '1' and src_valid_i = '1' then
+      saw_mac_valid := true;
     end if;
 
     -- frame_handler maps crc_valid <= not fcs_error,
@@ -101,12 +103,13 @@ architecture sim of tb_frame_handler is
     signal clk_i        : in std_logic;
     signal din_o        : out std_logic_vector(7 downto 0);
     signal dv_o         : out std_logic;
-    signal mac_ready_i  : in std_logic;
+    signal dst_valid_i  : in std_logic;
+    signal src_valid_i  : in std_logic;
     signal crc_valid_i  : in std_logic;
     constant preamble_i : in byte_array_t(0 to 6);
     constant sfd_i      : in std_logic_vector(7 downto 0);
     constant pkt        : in byte_array_t;
-    variable saw_mac_ready : inout boolean;
+    variable saw_mac_valid : inout boolean;
     variable saw_crc_error : inout boolean
   ) is
   begin
@@ -115,28 +118,28 @@ architecture sim of tb_frame_handler is
       din_o <= preamble_i(i);
       dv_o  <= '1';
       wait until rising_edge(clk_i);
-      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+      sample_flags(dst_valid_i, src_valid_i, crc_valid_i, saw_mac_valid, saw_crc_error);
     end loop;
 
     -- Send SFD
     din_o <= sfd_i;
     dv_o  <= '1';
     wait until rising_edge(clk_i);
-    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    sample_flags(dst_valid_i, src_valid_i, crc_valid_i, saw_mac_valid, saw_crc_error);
 
     -- Send complete packet (DST + SRC + EtherType + Payload + FCS)
     for i in pkt'range loop
       din_o <= pkt(i);
       dv_o  <= '1';
       wait until rising_edge(clk_i);
-      sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+      sample_flags(dst_valid_i, src_valid_i, crc_valid_i, saw_mac_valid, saw_crc_error);
     end loop;
 
     -- End transmission
     dv_o  <= '0';
     din_o <= (others => '0');
     wait until rising_edge(clk_i);
-    sample_flags(mac_ready_i, crc_valid_i, saw_mac_ready, saw_crc_error);
+    sample_flags(dst_valid_i, src_valid_i, crc_valid_i, saw_mac_valid, saw_crc_error);
   end procedure;
 
 begin
@@ -148,9 +151,10 @@ begin
       data_in    => data_in,
       data_valid => data_valid,
       data_out   => data_out,
-      mac_ready  => mac_ready,
       dst_mac    => dst_mac,
+      dst_valid  => dst_valid,
       src_mac    => src_mac,
+      src_valid  => src_valid,
       crc_valid  => crc_valid
     );
 
@@ -168,7 +172,7 @@ begin
     variable exp_dst_bad : std_logic_vector(47 downto 0);
     variable exp_src_bad : std_logic_vector(47 downto 0);
 
-    variable saw_mac_ready : boolean;
+    variable saw_mac_valid : boolean;
     variable saw_crc_error : boolean;
   begin
     reset <= '1';
@@ -187,17 +191,17 @@ begin
 
     -- Test 1: Valid packet from tb_fcs_check_parallel
     report "=== Test 1: Valid packet (PKT_OK) ===";
-    saw_mac_ready := false;
+    saw_mac_valid := false;
     saw_crc_error := false;
     send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
+      clk, data_in, data_valid, dst_valid, src_valid, crc_valid,
       PREAMBLE, SFD, PKT_OK,
-      saw_mac_ready, saw_crc_error
+      saw_mac_valid, saw_crc_error
     );
 
     for i in 0 to 12 loop
       wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+      sample_flags(dst_valid, src_valid, crc_valid, saw_mac_valid, saw_crc_error);
     end loop;
 
     assert dst_mac = exp_dst_ok
@@ -208,8 +212,8 @@ begin
       report "Test 1 FAILED: src_mac mismatch. Got " & to_hstring(src_mac) & 
               " expected " & to_hstring(exp_src_ok)
       severity error;
-    assert saw_mac_ready
-      report "Test 1 FAILED: mac_ready pulse not seen"
+    assert saw_mac_valid
+      report "Test 1 FAILED: dst_valid and src_valid not seen"
       severity error;
     assert not saw_crc_error
       report "Test 1 FAILED: valid packet triggered CRC error"
@@ -218,17 +222,17 @@ begin
 
     -- Test 2: Corrupted packet with same FCS (should trigger CRC error)
     report "=== Test 2: Corrupted packet (PKT_BAD) ===";
-    saw_mac_ready := false;
+    saw_mac_valid := false;
     saw_crc_error := false;
     send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
+      clk, data_in, data_valid, dst_valid, src_valid, crc_valid,
       PREAMBLE, SFD, PKT_BAD,
-      saw_mac_ready, saw_crc_error
+      saw_mac_valid, saw_crc_error
     );
 
     for i in 0 to 12 loop
       wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+      sample_flags(dst_valid, src_valid, crc_valid, saw_mac_valid, saw_crc_error);
     end loop;
 
     assert dst_mac = exp_dst_bad
@@ -237,8 +241,8 @@ begin
     assert src_mac = exp_src_bad
       report "Test 2 FAILED: src_mac mismatch"
       severity error;
-    assert saw_mac_ready
-      report "Test 2 FAILED: mac_ready pulse not seen"
+    assert saw_mac_valid
+      report "Test 2 FAILED: dst_valid and src_valid not seen"
       severity error;
     assert saw_crc_error
       report "Test 2 FAILED: expected CRC error not detected"
@@ -253,17 +257,17 @@ begin
     reset <= '0';
     wait for CLK_PERIOD;
 
-    saw_mac_ready := false;
+    saw_mac_valid := false;
     saw_crc_error := false;
     send_packet_with_preamble(
-      clk, data_in, data_valid, mac_ready, crc_valid,
+      clk, data_in, data_valid, dst_valid, src_valid, crc_valid,
       PREAMBLE, SFD, PKT_OK,
-      saw_mac_ready, saw_crc_error
+      saw_mac_valid, saw_crc_error
     );
 
     for i in 0 to 12 loop
       wait until rising_edge(clk);
-      sample_flags(mac_ready, crc_valid, saw_mac_ready, saw_crc_error);
+      sample_flags(dst_valid, src_valid, crc_valid, saw_mac_valid, saw_crc_error);
     end loop;
 
     assert dst_mac = exp_dst_ok

@@ -28,7 +28,6 @@ architecture sim of tb_crc_hash is
 
     -- Konstanten
     constant CLK_PERIOD : time := 8 ns;   -- 125 MHz
-    constant PROC_TIME  : time := CLK_PERIOD * 48;  -- 48 clocks to process
 
     -- CRC16 Software-Referenz
     procedure crc16_ref (

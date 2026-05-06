@@ -45,13 +45,13 @@ entity mac_read is
         req3   : in  std_logic;
 
         -- Ausgaben
-        dest0  : out unsigned(1 downto 0);
+        dest0  : out std_logic_vector(3 downto 0);
         valid0 : out std_logic;
-        dest1  : out unsigned(1 downto 0);
+        dest1  : out std_logic_vector(3 downto 0);
         valid1 : out std_logic;
-        dest2  : out unsigned(1 downto 0);
+        dest2  : out std_logic_vector(3 downto 0);
         valid2 : out std_logic;
-        dest3  : out unsigned(1 downto 0);
+        dest3  : out std_logic_vector(3 downto 0);
         valid3 : out std_logic;
 
         -- Service (bram interfacing)
@@ -65,12 +65,24 @@ architecture rtl of mac_read is
     type state_t is (ZERO, ZERO_WAIT, ZERO_OUT, ONE, ONE_WAIT, ONE_OUT, TWO, TWO_WAIT, TWO_OUT, THREE, THREE_WAIT, THREE_OUT);
     signal state, state_next : state_t;
 
+    function to_onehot(sel : std_logic_vector(1 downto 0)) return std_logic_vector is
+        variable oh : std_logic_vector(3 downto 0) := (others => '0');
+    begin
+        case sel is
+            when "00" => oh := "0001";
+            when "01" => oh := "0010";
+            when "10" => oh := "0100";
+            when others => oh := "1000";
+        end case;
+        return oh;
+    end function;
+
     signal raddr_next : std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal ren_next   : std_logic;
 
     signal ack0, ack1, ack2, ack3 : std_logic;
 
-    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : unsigned(1 downto 0) := (others => '0');
+    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : STD_LOGIC_VECTOR(3 downto 0);
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : std_logic := '0';
 
 begin
@@ -100,11 +112,11 @@ begin
             when ZERO_OUT =>
                 state_next <= ONE;
                 ack0 <= '1';
+                valid0_reg <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    valid0_reg <= '0';
+                    dest0_reg  <= "1110";
                 else
-                    valid0_reg <= '1';
-                    dest0_reg <= unsigned(rdata(1 downto 0));
+                    dest0_reg <= to_onehot(rdata(1 downto 0));
                 end if;
                 
             when ONE =>
@@ -119,11 +131,11 @@ begin
             when ONE_OUT =>
                 state_next <= TWO;
                 ack1 <= '1';
+                valid1_reg <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    valid1_reg <= '0';
+                    dest1_reg <= "1101";
                 else
-                    valid1_reg <= '1';
-                    dest1_reg <= unsigned(rdata(1 downto 0));
+                    dest1_reg <= to_onehot(rdata(1 downto 0));
                 end if;
             when TWO =>
                 state_next <= THREE;
@@ -137,11 +149,11 @@ begin
             when TWO_OUT =>
                 state_next <= THREE;
                 ack2 <= '1';
+                valid2_reg <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    valid2_reg <= '0';
+                    dest2_reg <= "1011";
                 else
-                    valid2_reg <= '1';
-                    dest2_reg <= unsigned(rdata(1 downto 0));
+                    dest2_reg <= to_onehot(rdata(1 downto 0));
                 end if;
             when THREE =>
                 state_next <= ZERO;
@@ -155,11 +167,11 @@ begin
             when THREE_OUT =>
                 state_next <= ZERO;
                 ack3 <= '1';
+                valid3_reg <= '1';
                 if unsigned(rdata(DATA_WIDTH-1 downto 2)) = 0 then
-                    valid3_reg <= '0';
+                    dest3_reg <= "0111";
                 else
-                    valid3_reg <= '1';
-                    dest3_reg <= unsigned(rdata(1 downto 0));
+                    dest3_reg <= to_onehot(rdata(1 downto 0));
                 end if;
         end case;
     end process round_robin_comb;
