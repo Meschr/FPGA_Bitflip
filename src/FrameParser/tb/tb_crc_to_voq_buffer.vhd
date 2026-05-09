@@ -2,17 +2,22 @@
 -- Testbench: tb_crc_to_voq_buffer
 --
 -- Zweck:
---   Stimuliert den crc_to_voq_buffer mit vier aufeinanderfolgenden Frames,
+--   Stimuliert den crc_to_voq_buffer mit 4 aufeinanderfolgenden Frames,
 --   jeweils 15 Datenbytes lang, an unterschiedliche Zielports (One-Hot).
 --
--- Timing pro Frame:
---     Takt 1..15:  wr_en='1', wr_data=Byte 1..15. Auf Byte 15 wird wr_eof='1'.
---     Takt 6    :  dest_port_flag='1' UND dest_port=One-Hot UND crc_valid='1'.
---                 (5 Takte nach dem ersten Byte)
---     Takt 7    :  Alle Trigger wieder zurueck auf '0'.
---     ...       :  Warten, bis der Frame ausgelesen wurde.
+-- Timing pro Frame (relativ zum 1. Schreibtakt = Takt 1):
+--     Takt  1 ..  5 :  wr_en='1', wr_data = Byte 1..5, wr_eof='0'.
+--     Takt  6       :  wr_en='1', wr_data = Byte 6, wr_eof='0',
+--                      DAZU: dest_port_flag='1', dest_port=One-Hot.
+--                      ==> "5 Takte nach Byte 1"
+--     Takt  7       :  dest_port_flag, dest_port wieder '0'.
+--                      Datenstrom laeuft weiter (Byte 7).
+--     Takt  8 .. 14 :  Byte 8..14, wr_eof='0'.
+--     Takt 15       :  Byte 15, wr_eof='1' (Frame-Ende).
+--     Takt 16       :  wr_en='0' (Schreibseite aus).
+--     Pause         :  Warten, bis das Frame komplett ausgelesen ist.
 --
--- Ein Monitor-Prozess loggt jedes Lesebyte (wenn rd_dest_port_en aktiv ist).
+-- Ein Monitor-Prozess loggt jedes Lesebyte, wenn rd_dest_port_en aktiv ist.
 -- =============================================================================
 
 library ieee;
@@ -27,8 +32,36 @@ architecture sim of tb_crc_to_voq_buffer is
     ---------------------------------------------------------------------------
     -- Konstanten
     ---------------------------------------------------------------------------
-    constant CLK_PERIOD : time    := 10 ns;
-    constant DEPTH      : integer := 2000;
+    constant CLK_PERIOD   : time    := 10 ns;
+    constant DEPTH        : integer := 64;
+    constant FRAME_LEN    : integer := 15;
+    constant FLAG_OFFSET  : integer := 6;   -- Flag im 6. Takt (= 5 Takte NACH Byte 1)
+
+    ---------------------------------------------------------------------------
+    -- Frame-Daten
+    ---------------------------------------------------------------------------
+    type byte_array_t is array(1 to FRAME_LEN) of std_logic_vector(7 downto 0);
+
+    constant FRAME_1 : byte_array_t := (
+        x"A1", x"A2", x"A3", x"A4", x"A5",
+        x"A6", x"A7", x"A8", x"A9", x"AA",
+        x"AB", x"AC", x"AD", x"AE", x"AF"
+    );
+    constant FRAME_2 : byte_array_t := (
+        x"B1", x"B2", x"B3", x"B4", x"B5",
+        x"B6", x"B7", x"B8", x"B9", x"BA",
+        x"BB", x"BC", x"BD", x"BE", x"BF"
+    );
+    constant FRAME_3 : byte_array_t := (
+        x"C1", x"C2", x"C3", x"C4", x"C5",
+        x"C6", x"C7", x"C8", x"C9", x"CA",
+        x"CB", x"CC", x"CD", x"CE", x"CF"
+    );
+    constant FRAME_4 : byte_array_t := (
+        x"D1", x"D2", x"D3", x"D4", x"D5",
+        x"D6", x"D7", x"D8", x"D9", x"DA",
+        x"DB", x"DC", x"DD", x"DE", x"DF"
+    );
 
     ---------------------------------------------------------------------------
     -- DUT-Signale
@@ -43,8 +76,7 @@ architecture sim of tb_crc_to_voq_buffer is
     signal wr_data : std_logic_vector(7 downto 0) := (others => '0');
     signal wr_eof  : std_logic := '0';
 
-    -- Frame-Metadaten (kommen am Ende des Frames)
-    signal crc_valid      : std_logic := '0';
+    -- Frame-Metadaten
     signal dest_port      : std_logic_vector(3 downto 0) := (others => '0');
     signal dest_port_flag : std_logic := '0';
 
@@ -56,32 +88,6 @@ architecture sim of tb_crc_to_voq_buffer is
     -- Status
     signal frame_rdy : std_logic;
     signal full      : std_logic_vector(3 downto 0);
-
-    type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
-
-    constant FRAME1 : byte_array_t(0 to 14) := (
-        x"A1", x"A2", x"A3", x"A4", x"A5",
-        x"A6", x"A7", x"A8", x"A9", x"AA",
-        x"AB", x"AC", x"AD", x"AE", x"AF"
-    );
-
-    constant FRAME2 : byte_array_t(0 to 14) := (
-        x"B1", x"B2", x"B3", x"B4", x"B5",
-        x"B6", x"B7", x"B8", x"B9", x"BA",
-        x"BB", x"BC", x"BD", x"BE", x"BF"
-    );
-
-    constant FRAME3 : byte_array_t(0 to 14) := (
-        x"C1", x"C2", x"C3", x"C4", x"C5",
-        x"C6", x"C7", x"C8", x"C9", x"CA",
-        x"CB", x"CC", x"CD", x"CE", x"CF"
-    );
-
-    constant FRAME4 : byte_array_t(0 to 14) := (
-        x"D1", x"D2", x"D3", x"D4", x"D5",
-        x"D6", x"D7", x"D8", x"D9", x"DA",
-        x"DB", x"DC", x"DD", x"DE", x"DF"
-    );
 
 begin
 
@@ -116,7 +122,6 @@ begin
             wr_data         => wr_data,
             wr_eof          => wr_eof,
 
-            crc_valid       => crc_valid,
             dest_port       => dest_port,
             dest_port_flag  => dest_port_flag,
 
@@ -133,55 +138,54 @@ begin
     ---------------------------------------------------------------------------
     stim : process
 
-        -- ---------------------------------------------------------------------
-        -- Sendet ein Frame: 15 Datenbytes, dest_port_flag + dest_port
-        -- 5 Takte nach dem ersten Byte
-        -- ---------------------------------------------------------------------
+        -----------------------------------------------------------------------
+        -- Sendet ein Frame: 15 Datenbytes, mit dest_port_flag im 6. Takt
+        -----------------------------------------------------------------------
         procedure send_frame(
-            constant payload        : in byte_array_t;
-            constant port_oh        : in std_logic_vector(3 downto 0);
-            constant frame_id       : in integer
+            constant data     : in byte_array_t;
+            constant port_oh  : in std_logic_vector(3 downto 0);
+            constant frame_id : in integer
         ) is
-            constant FLAG_CYCLE : integer := 5;
         begin
             report "==================================================";
             report "Sende Frame " & integer'image(frame_id)
-                 & " -> dest_port (One-Hot) = " & to_string(port_oh);
-            report "Daten: 15 Bytes (EOF auf letztem Byte)";
+                 & " (" & integer'image(FRAME_LEN) & " Bytes)"
+                 & " -> Port (One-Hot) = " & to_string(port_oh);
 
-            ----- 15 Datenbytes, EOF auf dem letzten Byte -----
-            for i in payload'range loop
+            for i in 1 to FRAME_LEN loop
                 wait until rising_edge(clk);
+
+                -- Datenbyte und Schreibfreigabe
                 wr_en   <= '1';
-                wr_data <= payload(i);
-                if i = payload'high then
+                wr_data <= data(i);
+
+                -- EOF nur auf dem letzten Byte
+                if i = FRAME_LEN then
                     wr_eof <= '1';
                 else
                     wr_eof <= '0';
                 end if;
 
-                if i = FLAG_CYCLE then
+                -- Im 6. Takt (= 5 Takte nach Byte 1): Port-Adresse + Flag
+                if i = FLAG_OFFSET then
                     dest_port_flag <= '1';
                     dest_port      <= port_oh;
-                    crc_valid      <= '1';
-                else
+                elsif i = FLAG_OFFSET + 1 then
+                    -- Flag nach 1 Takt wieder loslassen
                     dest_port_flag <= '0';
                     dest_port      <= (others => '0');
-                    crc_valid      <= '0';
                 end if;
             end loop;
 
-            ----- Schreibseite freigeben -----
+            -- Schreibseite ausschalten
             wait until rising_edge(clk);
-            wr_en          <= '0';
-            wr_eof         <= '0';
-            wr_data        <= (others => '0');
-            dest_port_flag <= '0';
-            dest_port      <= (others => '0');
-            crc_valid      <= '0';
+            wr_en   <= '0';
+            wr_eof  <= '0';
+            wr_data <= (others => '0');
 
-            ----- Warten, bis das Frame komplett ausgelesen ist -----
-            wait for 12 * CLK_PERIOD;
+            -- Warten, bis das Frame komplett ausgelesen ist
+            -- (Read laeuft parallel zum Write; reichlich Margin)
+            wait for 25 * CLK_PERIOD;
         end procedure;
 
     begin
@@ -196,24 +200,12 @@ begin
         wait for 2 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
-        -- Frame 1: an Port 0 (One-Hot "0001")
+        -- 4 Frames an je einen anderen Zielport
         -----------------------------------------------------------------------
-        send_frame(FRAME1, "0001", 1);
-
-        -----------------------------------------------------------------------
-        -- Frame 2: an Port 1 (One-Hot "0010")
-        -----------------------------------------------------------------------
-        send_frame(FRAME2, "0010", 2);
-
-        -----------------------------------------------------------------------
-        -- Frame 3: an Port 3 (One-Hot "1000")
-        -----------------------------------------------------------------------
-        send_frame(FRAME3, "1000", 3);
-
-        -----------------------------------------------------------------------
-        -- Frame 4: an Port 2 (One-Hot "0100")
-        -----------------------------------------------------------------------
-        send_frame(FRAME4, "0100", 4);
+        send_frame(FRAME_1, "0001", 1);   -- Port 0
+        send_frame(FRAME_2, "0010", 2);   -- Port 1
+        send_frame(FRAME_3, "0100", 3);   -- Port 2
+        send_frame(FRAME_4, "1000", 4);   -- Port 3
 
         -----------------------------------------------------------------------
         -- Auslaufen lassen, dann beenden
@@ -227,7 +219,6 @@ begin
 
     ---------------------------------------------------------------------------
     -- Monitor: loggt jedes Lesebyte, wenn rd_dest_port_en /= 0
-    -- (also wenn der Buffer einen Frame aktiv an einen VOQ schiebt)
     ---------------------------------------------------------------------------
     monitor : process(clk)
     begin
