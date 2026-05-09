@@ -28,13 +28,12 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         rd_data       : out std_logic_vector(7 downto 0); -- Ausgelesenes Datenbyte
         rd_eof        : out std_logic;                    -- '1' wenn dies das EOF-Byte ist (nur gueltig wenn rd_valid='1')
-        rd_dest_port_en  : out std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames
+        rd_dest_port_en  : out std_logic_vector(3 downto 0) -- Zielport des aktuellen Frames
+        -- rd_en : out std_logic;                    -- Lesefreigabe (optional, da Lesen automatisch bei rd_valid='1' erfolgt)
 
         -- -----------------------------------------------------------------
         -- Status-Ausgaenge
         -- -----------------------------------------------------------------
-        frame_rdy     : out std_logic;                    -- '1' wenn Frame-Read aktiv ist
-        full          : out std_logic_vector(3 downto 0)  -- '1' wenn FIFO voll ist (Schreiben nicht moeglich)
     );
 end entity crc_to_voq_buffer;
 
@@ -76,7 +75,6 @@ architecture rtl of crc_to_voq_buffer is
     signal can_read       : std_logic;  -- Lesen erlaubt (rd_en UND nicht leer)
     signal rd_active      : std_logic := '0'; -- Frame-Read aktiv bis EOF gelesen
     signal dest_port_reg  : std_logic_vector(3 downto 0) := (others => '0');
-    
 
 begin
 
@@ -168,9 +166,5 @@ begin
             end if;
         end if;
     end process ptr_proc;
-
-    -- Ausgabe Status-Signale
-    full      <= (others => full_int);
-    frame_rdy <= rd_active;
 
 end architecture rtl;
