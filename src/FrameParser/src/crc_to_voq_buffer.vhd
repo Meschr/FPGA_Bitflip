@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity crc_to_voq_buffer is
     generic (
-        DEPTH       : integer := 20; -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
+        DEPTH       : integer := 64; -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
         NUM_OUTPUTS : integer := 4     -- Anzahl der Ziel-VOQs
     );
     port (
@@ -20,7 +20,6 @@ entity crc_to_voq_buffer is
         wr_eof        : in  std_logic;                    -- '1' wenn dies das letzte Byte des Frames ist
 
 
-        crc_valid        : in  std_logic;                    -- CRC-Status (nur gueltig bei wr_eof='1')
         dest_port       : in  std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames (nur gueltig bei wr_eof='1')                  
         dest_port_flag  : in  std_logic;                    -- '1' wenn dest_port gültig ist (nur bei wr_eof='1')
 
@@ -87,9 +86,6 @@ begin
     empty_int <= '1' when count = to_unsigned(0, count'length) else '0';
 
     can_write <= '1' when (wr_en = '1' and full_int = '0') else '0';
-
-
-
 
     can_read <= '1' when (rd_active = '1' and empty_int = '0') else '0';
     rd_dest_port_en <= dest_port_reg when rd_valid_reg = '1' else (others => '0');

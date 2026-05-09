@@ -4,13 +4,18 @@ use ieee.numeric_std.all;
 
 entity fcs_check_parallel is
   port (
+    -- inputs
     clk            : in  std_logic;
     reset          : in  std_logic; -- async
     start_of_frame : in  std_logic; -- arrival of first byte
     end_of_frame   : in  std_logic; -- arrival of last byte
     data_in        : in  std_logic_vector(7 downto 0);
+
+    -- outputs
     fcs_error      : out std_logic;
-    fcs_ok         : out std_logic
+    fcs_ok         : out std_logic;
+    data_out       : out std_logic_vector(7 downto 0);
+    bit_valid      : out std_logic
   );
 end fcs_check_parallel;
 
@@ -22,8 +27,7 @@ architecture rtl of fcs_check_parallel is
   signal crc_next  : std_logic_vector(31 downto 0);
   signal checking  : std_logic := '0';
   signal head_cnt  : unsigned(5 downto 0) := (others => '0');
-
-  signal bit_valid : std_logic;
+  
 
 begin
 
@@ -93,6 +97,9 @@ end process;
       if bit_valid = '1' then
         -- end_of_frame marks data_valid falling edge from parser,
         -- so crc_reg already contains the CRC after the last valid byte.
+
+        data_out <= data_in; -- passthrough of input data
+
         if end_of_frame = '1' then
           if crc_reg = x"C704DD7B" then
             fcs_error <= '0';

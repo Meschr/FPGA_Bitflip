@@ -47,6 +47,18 @@ if ($srcChoice -eq "A" -or $srcChoice -eq "a") {
     $selectedSrc = $indices | ForEach-Object { $srcFiles[$_] }
 }
 
+$preferredOrder = @(
+    "frame_parser.vhd",
+    "fcs_check_parallel.vhd",
+    "crc_to_voq_buffer.vhd",
+    "frame_handler.vhd"
+)
+
+$selectedSrc = $selectedSrc | Sort-Object @{ Expression = {
+    $position = [array]::IndexOf($preferredOrder, $_.Name)
+    if ($position -lt 0) { 999 } else { $position }
+  } }, Name
+
 # =====================================================================
 # Schritt 2: Source-Dateien kompilieren
 # =====================================================================

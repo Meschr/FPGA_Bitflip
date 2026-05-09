@@ -23,50 +23,102 @@ entity frame_handler is
         -- inputs
         data_in    : in std_logic_vector(7 downto 0);
         data_valid : in std_logic;
+        buffer_dest_port : in std_logic_vector(3 downto 0);
+
 
         --outputs
         data_out    : out std_logic_vector(7 downto 0);
-        dst_mac     : out std_logic_vector(47 downto 0);
-        dst_valid   : out std_logic;                       -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
-        src_mac     : out std_logic_vector(47 downto 0);
-        src_valid   : out std_logic;                        -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
-        crc_valid   : out std_logic
+        dst_port    : out std_logic_vector(3 downto 0);
+        crc_valid   : out  std_logic;                                     -- signal for MAC learning to store dst_adr
+        eof_handler : out std_logic;                                     -- for voq
+        frame_rdy_handler : out std_logic;                                     -- for voq
+        full_buffer : out std_logic_vector(3 downto 0)                                     -- for voq         
+               
     );
 end entity;
 
 architecture rtl of frame_handler is
-    signal sof         : std_logic := '0'; -- Start of Frame
-    signal eof         : std_logic := '0'; -- End of Frame
-    signal data        : std_logic_vector(7 downto 0);
-    signal fcs_ok      : std_logic := '0';
+    -- output frameparser
+    signal sof_int         : std_logic := '0'; -- Start of Frame
+    signal eof_int         : std_logic := '0'; -- End of Frame
+    signal data_int        : std_logic_vector(7 downto 0);
+    signal dst_mac_int     :  std_logic_vector(47 downto 0) := (others => '0');    -- Destination MAC from parser
+    signal dst_valid_int   :  std_logic := '0';                                     -- Destination MAC valid pulse
+    signal src_mac_int     :  std_logic_vector(47 downto 0) := (others => '0');    -- Source MAC from parser
+    signal src_valid_int   :  std_logic := '0';                                     -- Source MAC valid pulse
+
+    -- output fcs_check_parallel    
+    signal data_int_crc   : std_logic_vector(7 downto 0);
+    signal fcs_ok_int      : std_logic := '0';
+    signal fcs_error_int   : std_logic := '0';
+    signal bit_valid_int  : std_logic := '0';  
+    
+    signal buffer_dest_port_flag : std_logic := '0';
+    signal buffer_flush : std_logic := '0';
+    
 begin
+
+    
+    buffer_dest_port_flag <= fcs_ok_int;
+    buffer_flush <= fcs_error_int;
+    crc_valid <= fcs_ok_int;
 
     u_frameparser : entity work.frame_parser
     port map (
+        -- inputs
         clk       => clk,
         reset     => reset,
             
         data_in   => data_in,
-        data_out  => data,
         data_valid => data_valid,           
-        sof       => sof,
-        eof       => eof,
-        dst_mac   => dst_mac,
-        dst_valid => dst_valid,
-        src_mac   => src_mac,
-        src_valid => src_valid
+
+        -- outputs
+        data_out  => data_int,
+        sof       => sof_int,
+        eof       => eof_int,
+        dst_mac   => dst_mac_int,
+        dst_valid => dst_valid_int,
+        src_mac   => src_mac_int,
+        src_valid => src_valid_int
     );
     
     u_fcscheck : entity work.fcs_check_parallel
     port map (
+        -- inputs
         clk            => clk,
         reset          => reset,
-        start_of_frame => sof,
-        end_of_frame   => eof,
-        data_in        => data,
-        fcs_error      => crc_valid,
-        fcs_ok         => fcs_ok
+        start_of_frame => sof_int,
+        end_of_frame   => eof_int,
+        data_in        => data_int,
+
+        -- outputs
+        fcs_error      => fcs_error_int,
+        fcs_ok         => fcs_ok_int,
+        data_out       => data_int_crc,
+        bit_valid      => bit_valid_int
     );
 
-    data_out <= data;
+    u_crc_buffer : entity work.crc_to_voq_buffer
+    port map (
+
+        -- inputs
+        clk         => clk,
+        reset       => reset,
+        flush       => buffer_flush,
+
+        wr_en       => bit_valid_int, 
+        wr_data     => data_int_crc,
+        wr_eof      => fcs_error_int or fcs_ok_int,
+
+        dest_port   => buffer_dest_port,
+        dest_port_flag => buffer_dest_port_flag,
+
+        -- outputs
+        rd_data     => data_out,
+        rd_eof      => eof_handler, -- pulse when EOF is detected and CRC is valid
+        rd_dest_port_en => dst_port,
+
+        frame_rdy   => frame_rdy_handler, -- pulse when a complete frame is ready in the buffer (after EOF and CRC check)
+        full        => full_buffer
+    );
 end architecture;

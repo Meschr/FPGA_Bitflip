@@ -1,10 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_textio.all;
 
 library std;
-use std.textio.all;
 use std.env.all;
 
 entity tb_frame_handler is
@@ -12,247 +10,257 @@ end entity tb_frame_handler;
 
 architecture sim of tb_frame_handler is
   constant CLK_PERIOD : time := 10 ns;
-  constant INTERFRAME_GAP_CYCLES  : natural := 12;
-  constant STIMULUS_FILE_PRIMARY  : string := "src/stimulus.txt";
-  constant STIMULUS_FILE_FALLBACK : string := "../src/stimulus.txt";
-  constant MAX_FRAME_BYTES        : natural := 256;
+  constant MAX_WAIT_CYCLES : natural := 40;
 
   signal clk        : std_logic := '0';
   signal reset      : std_logic := '1';
   signal data_in    : std_logic_vector(7 downto 0) := (others => '0');
   signal data_valid : std_logic := '0';
+  signal buffer_dest_port : std_logic_vector(3 downto 0) := (others => '0');
 
-  signal data_out    : std_logic_vector(7 downto 0);
-  signal dst_mac     : std_logic_vector(47 downto 0);
-  signal dst_valid   : std_logic;
-  signal src_mac     : std_logic_vector(47 downto 0);
-  signal src_valid   : std_logic;
-  signal crc_valid   : std_logic;
+  signal data_out           : std_logic_vector(7 downto 0);
+  signal dst_port           : std_logic_vector(3 downto 0);
+  signal crc_valid          : std_logic;
+  signal eof_handler        : std_logic;
+  signal frame_rdy_handler  : std_logic;
+  signal full_buffer        : std_logic_vector(3 downto 0);
 
   type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
 
-  function parse_hex_byte(constant hex_str : string) return std_logic_vector is
-    variable result : std_logic_vector(7 downto 0);
-  begin
-    result := std_logic_vector(to_unsigned(integer'value("16#" & hex_str & "#"), 8));
-    return result;
-  end function;
+  constant PREAMBLE_BYTES : byte_array_t(0 to 6) := (
+    x"55", x"55", x"55", x"55", x"55", x"55", x"55"
+  );
 
-  procedure read_frame(
-    file stim_file : text;
-    variable frame : out byte_array_t;
-    variable frame_len : out natural;
-    variable is_corrupt : out boolean;
-    variable is_eof : out boolean
-  ) is
-    variable line_v : line;
-    variable hex_pair : string(1 to 2);
-    variable hex_idx : natural;
-    variable byte_idx : natural := 0;
-  begin
-    is_eof := false;
-    is_corrupt := false;
-    frame_len := 0;
+  constant SFD_BYTE : std_logic_vector(7 downto 0) := x"D5";
 
-    -- Read lines until we find a valid data line
-    loop
-      if endfile(stim_file) then
-        is_eof := true;
-        return;
-      end if;
+  constant FRAME_OK : byte_array_t(0 to 63) := (
+    x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
+    x"34", x"56", x"78", x"90", x"08", x"00", x"45", x"00",
+    x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
+    x"05", x"40", x"C0", x"A8", x"00", x"2C", x"C0", x"A8",
+    x"00", x"04", x"04", x"00", x"04", x"00", x"00", x"1A",
+    x"2D", x"E8", x"00", x"01", x"02", x"03", x"04", x"05",
+    x"06", x"07", x"08", x"09", x"0A", x"0B", x"0C", x"0D",
+    x"0E", x"0F", x"10", x"11",
+    x"E6", x"C5", x"3D", x"B2"
+  );
 
-      readline(stim_file, line_v);
+  constant FRAME_BAD : byte_array_t(0 to 63) := (
+    x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
+    x"34", x"56", x"79", x"90", x"08", x"00", x"45", x"00",
+    x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
+    x"05", x"40", x"C0", x"A8", x"00", x"2C", x"C0", x"A8",
+    x"00", x"04", x"04", x"00", x"04", x"00", x"00", x"1A",
+    x"2D", x"E8", x"00", x"01", x"02", x"03", x"04", x"05",
+    x"06", x"07", x"08", x"09", x"0A", x"0B", x"0C", x"0D",
+    x"0E", x"0F", x"10", x"11",
+    x"E6", x"C5", x"3D", x"B2"
+  );
 
-      -- Skip empty lines
-      if line_v'length = 0 then
-        next;
-      end if;
-
-      -- Check for comment lines
-      if line_v(1) = '#' then
-        -- Check if this is a "Corrupt" frame comment
-        if line_v'length >= 9 and line_v(3 to 8) = "Corrupt" then
-          is_corrupt := true;
-        end if;
-        -- Continue reading to get the hex data on the next line
-        next;
-      end if;
-
-      -- This should be a hex data line
-      byte_idx := 0;
-      hex_idx := line_v'left;
-
-      while hex_idx < line_v'right loop
-        -- Skip whitespace
-        while hex_idx <= line_v'right and line_v(hex_idx) = ' ' loop
-          hex_idx := hex_idx + 1;
-        end loop;
-
-        exit when hex_idx >= line_v'right;
-
-        -- Read two hex characters
-        if hex_idx + 1 <= line_v'right then
-          hex_pair := line_v(hex_idx to hex_idx + 1);
-          frame(byte_idx) := parse_hex_byte(hex_pair);
-          byte_idx := byte_idx + 1;
-          hex_idx := hex_idx + 2;
-        else
-          hex_idx := hex_idx + 1;
-        end if;
-      end loop;
-
-      frame_len := byte_idx;
-      exit;  -- Successfully read a frame
-    end loop;
-
-    deallocate(line_v);
-  end procedure;
-
-  procedure send_frame(
-    signal clk_i        : in std_logic;
-    signal din_o        : out std_logic_vector(7 downto 0);
-    signal dv_o         : out std_logic;
-    signal dst_valid_i  : in std_logic;
-    signal src_valid_i  : in std_logic;
-    signal crc_valid_i  : in std_logic;
-    constant frame      : in byte_array_t;
-    constant frame_len  : in natural;
-    variable saw_mac_valid : inout boolean;
-    variable saw_crc_error : inout boolean
+  procedure transmit_wire_frame(
+    signal clk_i : in std_logic;
+    signal din_o : out std_logic_vector(7 downto 0);
+    signal dv_o  : out std_logic;
+    constant payload : in byte_array_t;
+    constant label_text : in string
   ) is
   begin
-    -- Send frame bytes
-    for i in 0 to frame_len - 1 loop
-      din_o <= frame(i);
+    report "--- " & label_text & " ---";
+
+    for i in PREAMBLE_BYTES'range loop
+      din_o <= PREAMBLE_BYTES(i);
       dv_o  <= '1';
       wait until rising_edge(clk_i);
-      
-      if dst_valid_i = '1' and src_valid_i = '1' then
-        saw_mac_valid := true;
-      end if;
-
-      if crc_valid_i = '1' then
-        saw_crc_error := true;
-      end if;
     end loop;
 
-    -- Deassert valid and wait for interframe gap
+    din_o <= SFD_BYTE;
+    dv_o  <= '1';
+    wait until rising_edge(clk_i);
+
+    for i in payload'range loop
+      din_o <= payload(i);
+      dv_o  <= '1';
+      wait until rising_edge(clk_i);
+    end loop;
+
     dv_o  <= '0';
     din_o <= (others => '0');
-    for i in 0 to INTERFRAME_GAP_CYCLES - 1 loop
+    wait until rising_edge(clk_i);
+  end procedure;
+
+  procedure expect_buffer_output(
+    signal clk_i : in std_logic;
+    signal dout_i : in std_logic_vector(7 downto 0);
+    signal port_i : in std_logic_vector(3 downto 0);
+    signal crc_ok_i : in std_logic;
+    signal eof_i : in std_logic;
+    signal ready_i : in std_logic;
+    signal full_i : in std_logic_vector(3 downto 0);
+    constant expected_port : in std_logic_vector(3 downto 0);
+
+    constant payload : in byte_array_t;
+    constant label_text : in string
+  ) is
+  begin
+    wait for 0 ns;
+    assert crc_ok_i = '1'
+      report label_text & ": crc_valid pulse missing"
+      severity error;
+
+    for cycle in 0 to MAX_WAIT_CYCLES loop
       wait until rising_edge(clk_i);
+      wait for 0 ns;
+      exit when port_i = expected_port;
+    end loop;
+
+    assert port_i = expected_port
+      report label_text & ": expected port " & integer'image(to_integer(unsigned(expected_port))) & " but got " & integer'image(to_integer(unsigned(port_i)))
+      severity error;
+    assert ready_i = '1'
+      report label_text & ": frame_rdy_handler not asserted"
+      severity error;
+
+    assert dout_i = payload(payload'low)
+      report label_text & ": output byte 0 mismatch"
+      severity error;
+    assert eof_i = '0'
+      report label_text & ": EOF asserted too early"
+      severity error;
+    assert full_i = "0000"
+      report label_text & ": buffer unexpectedly full"
+      severity error;
+
+    for i in payload'low + 1 to payload'high loop
+      wait until rising_edge(clk_i);
+      wait for 0 ns;
+      assert port_i = expected_port
+        report label_text & ": port changed during read"
+        severity error;
+      assert dout_i = payload(i)
+        report label_text & ": output byte mismatch at index " & integer'image(i)
+        severity error;
+      if i = payload'high then
+        assert eof_i = '1'
+          report label_text & ": EOF missing on last output byte"
+          severity error;
+      else
+        assert eof_i = '0'
+          report label_text & ": EOF asserted too early"
+          severity error;
+      end if;
+      assert full_i = "0000"
+        report label_text & ": buffer unexpectedly full"
+        severity error;
+    end loop;
+
+    wait until rising_edge(clk_i);
+    wait for 0 ns;
+    assert port_i = "0000"
+      report label_text & ": port not released"
+      severity error;
+    assert ready_i = '0'
+      report label_text & ": frame_rdy_handler not released"
+      severity error;
+  end procedure;
+
+  procedure expect_no_buffer_output(
+    signal clk_i : in std_logic;
+    signal port_i : in std_logic_vector(3 downto 0);
+    signal crc_ok_i : in std_logic;
+    signal eof_i : in std_logic;
+    signal ready_i : in std_logic;
+    constant label_text : in string
+  ) is
+  begin
+    for cycle in 0 to MAX_WAIT_CYCLES loop
+      wait until rising_edge(clk_i);
+      wait for 0 ns;
+      assert crc_ok_i = '0'
+        report label_text & ": unexpected crc_valid pulse"
+        severity error;
+      assert port_i = "0000"
+        report label_text & ": unexpected VOQ activity"
+        severity error;
+      assert eof_i = '0'
+        report label_text & ": unexpected EOF pulse"
+        severity error;
+      assert ready_i = '0'
+        report label_text & ": unexpected frame_rdy_handler pulse"
+        severity error;
     end loop;
   end procedure;
 
 begin
   dut : entity work.frame_handler
     port map (
-      clk        => clk,
-      reset      => reset,
-      data_in    => data_in,
-      data_valid => data_valid,
-      data_out   => data_out,
-      dst_mac    => dst_mac,
-      dst_valid  => dst_valid,
-      src_mac    => src_mac,
-      src_valid  => src_valid,
-      crc_valid  => crc_valid
+      clk               => clk,
+      reset             => reset,
+      data_in           => data_in,
+      data_valid        => data_valid,
+      buffer_dest_port  => buffer_dest_port,
+      data_out          => data_out,
+      dst_port          => dst_port,
+      crc_valid         => crc_valid,
+      eof_handler       => eof_handler,
+      frame_rdy_handler => frame_rdy_handler,
+      full_buffer       => full_buffer
     );
 
-  p_clk : process
+  clk_gen : process
   begin
-    clk <= '0';
-    wait for CLK_PERIOD / 2;
-    clk <= '1';
-    wait for CLK_PERIOD / 2;
+    while true loop
+      clk <= '0';
+      wait for CLK_PERIOD / 2;
+      clk <= '1';
+      wait for CLK_PERIOD / 2;
+    end loop;
   end process;
 
-  p_stim : process
-    file stim_file : text;
-    variable status : file_open_status;
-    variable frame : byte_array_t(0 to MAX_FRAME_BYTES - 1);
-    variable frame_len : natural;
-    variable is_corrupt : boolean;
-    variable is_eof : boolean;
-    variable test_num : natural := 0;
-    variable saw_mac_valid : boolean;
-    variable saw_crc_error : boolean;
+  stim : process
   begin
-    -- Try to open stimulus file from primary location, then fallback
-    file_open(status, stim_file, STIMULUS_FILE_PRIMARY, read_mode);
-    if status /= open_ok then
-      file_open(status, stim_file, STIMULUS_FILE_FALLBACK, read_mode);
-    end if;
-    
-    assert status = open_ok
-      report "Unable to open stimulus file from " & STIMULUS_FILE_PRIMARY & " or " & STIMULUS_FILE_FALLBACK
-      severity failure;
-
-    -- Reset sequence
     reset <= '1';
     data_in <= (others => '0');
     data_valid <= '0';
-    wait for 5 * CLK_PERIOD;
+    wait for 4 * CLK_PERIOD;
     wait until rising_edge(clk);
     reset <= '0';
     wait until rising_edge(clk);
 
-    -- Read and send frames from stimulus file
-    is_eof := false;
-    loop
-      exit when is_eof;
+    buffer_dest_port <= "0001";
+    -- Test Frame 1: Port 1
+    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1");
+    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+              "0001", FRAME_OK, "Port 1 output");
 
-      read_frame(stim_file, frame, frame_len, is_corrupt, is_eof);
-      if is_eof then
-        exit;
-      end if;
+    buffer_dest_port <= "0010";
+    -- Test Frame 2: Port 2
+    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 2");
+    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+              "0010", FRAME_OK, "Port 2 output");
 
-      test_num := test_num + 1;
-      saw_mac_valid := false;
-      saw_crc_error := false;
+    buffer_dest_port <= "0100";
+    -- Test Frame 3: Port 3
+    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 3");
+    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+              "0100", FRAME_OK, "Port 3 output");
 
-      if is_corrupt then
-        report "Test " & natural'image(test_num) & ": Corrupt frame (" & 
-                natural'image(frame_len) & " bytes)";
-      else
-        report "Test " & natural'image(test_num) & ": Valid frame (" & 
-                natural'image(frame_len) & " bytes)";
-      end if;
+    -- Test corrupt frame (should not activate any port)
+    transmit_wire_frame(clk, data_in, data_valid, FRAME_BAD, "corrupt frame");
+    expect_no_buffer_output(clk, dst_port, crc_valid, eof_handler, frame_rdy_handler, "corrupt frame");
 
-      -- Send the frame
-      send_frame(clk, data_in, data_valid, dst_valid, src_valid, crc_valid,
-                 frame, frame_len, saw_mac_valid, saw_crc_error);
+    -- Reset and test again (Port 1)
+    reset <= '1';
+    wait for 3 * CLK_PERIOD;
+    wait until rising_edge(clk);
+    reset <= '0';
+    wait until rising_edge(clk);
 
-      -- Wait for frame processing
-      for i in 0 to 20 loop
-        wait until rising_edge(clk);
-        if dst_valid = '1' and src_valid = '1' then
-          saw_mac_valid := true;
-        end if;
-        if crc_valid = '1' then
-          saw_crc_error := true;
-        end if;
-      end loop;
+    buffer_dest_port <= "0001";
+    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1 after reset");
+    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+              "0001", FRAME_OK, "Port 1 output after reset");
 
-      -- Verify results based on frame type
-      if is_corrupt then
-        report "Test " & natural'image(test_num) & ": " &
-                "dst_mac=" & to_hstring(dst_mac) & " " &
-                "src_mac=" & to_hstring(src_mac) & " " &
-                "saw_mac_valid=" & boolean'image(saw_mac_valid) & " " &
-                "crc_error=" & boolean'image(saw_crc_error);
-      else
-        report "Test " & natural'image(test_num) & ": " &
-                "dst_mac=" & to_hstring(dst_mac) & " " &
-                "src_mac=" & to_hstring(src_mac) & " " &
-                "saw_mac_valid=" & boolean'image(saw_mac_valid) & " " &
-                "crc_error=" & boolean'image(saw_crc_error);
-      end if;
-
-    end loop;
-
-    file_close(stim_file);
-    report "All stimulus frames processed successfully" severity note;
+    report "All 3-port frame_handler checks passed." severity note;
     stop;
   end process;
 
