@@ -15,13 +15,16 @@ entity fcs_check_parallel is
     fcs_error      : out std_logic;
     fcs_ok         : out std_logic;
     data_out       : out std_logic_vector(7 downto 0);
-    bit_valid      : out std_logic
+    wr_en          : out std_logic;
+    eof_out        : out std_logic   -- synchronized EOF: high when end_of_frame aligns with data_out
   );
 end fcs_check_parallel;
 
 architecture rtl of fcs_check_parallel is
 
   constant POLY : std_logic_vector(31 downto 0) := x"04C11DB7";
+
+  signal bit_valid      :  std_logic;
 
   signal crc_reg   : std_logic_vector(31 downto 0) := (others => '0');
   signal crc_next  : std_logic_vector(31 downto 0);
@@ -98,6 +101,7 @@ end process;
         -- end_of_frame marks data_valid falling edge from parser,
         -- so crc_reg already contains the CRC after the last valid byte.
 
+        wr_en <= '1';
         data_out <= data_in; -- passthrough of input data
 
         if end_of_frame = '1' then
@@ -120,9 +124,14 @@ end process;
             head_cnt <= head_cnt + 1;
           end if;
         end if;
+      else
+        wr_en <= '0';
       end if;
 
     end if;
   end process;
+
+  -- EOF output synchronized with data_out
+  eof_out <= end_of_frame and bit_valid;
 
 end rtl;

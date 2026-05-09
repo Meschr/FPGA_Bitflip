@@ -51,7 +51,8 @@ architecture rtl of frame_handler is
     signal data_int_crc   : std_logic_vector(7 downto 0);
     signal fcs_ok_int      : std_logic := '0';
     signal fcs_error_int   : std_logic := '0';
-    signal bit_valid_int  : std_logic := '0';  
+    signal bit_valid_int  : std_logic := '0';
+    signal eof_int_delayed : std_logic := '0';  -- EOF synchronized with FCS output
     
     signal buffer_dest_port_flag : std_logic := '0';
     signal buffer_flush : std_logic := '0';
@@ -95,7 +96,8 @@ begin
         fcs_error      => fcs_error_int,
         fcs_ok         => fcs_ok_int,
         data_out       => data_int_crc,
-        bit_valid      => bit_valid_int
+        wr_en          => bit_valid_int,
+        eof_out        => eof_int_delayed
     );
 
     u_crc_buffer : entity work.crc_to_voq_buffer
@@ -108,7 +110,7 @@ begin
 
         wr_en       => bit_valid_int, 
         wr_data     => data_int_crc,
-        wr_eof      => fcs_error_int or fcs_ok_int,
+        wr_eof      => eof_int_delayed,    -- Synchronized EOF from FCS checker
 
         dest_port   => buffer_dest_port,
         dest_port_flag => buffer_dest_port_flag,
