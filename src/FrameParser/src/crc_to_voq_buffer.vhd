@@ -17,7 +17,8 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         wr_en         : in  std_logic;                    -- Schreibfreigabe
         wr_data       : in  std_logic_vector(7 downto 0); -- Datenbyte
-        wr_eof        : in  std_logic;                    -- '1' wenn dies das letzte Byte des Frames ist
+        wr_eof        : in  std_logic;     
+        crc_valid     : in  std_logic;                      -- '1' wenn dies das letzte Byte des Frames ist
 
 
         dest_port       : in  std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames (nur gueltig bei wr_eof='1')                  
@@ -28,7 +29,8 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         rd_data       : out std_logic_vector(7 downto 0); -- Ausgelesenes Datenbyte
         rd_eof        : out std_logic;                    -- '1' wenn dies das EOF-Byte ist (nur gueltig wenn rd_valid='1')
-        rd_dest_port_en  : out std_logic_vector(3 downto 0) -- Zielport des aktuellen Frames
+        rd_dest_port_en  : out std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames
+        crc_valid_out    : out std_logic                    -- '1' wenn das gelesene Byte das letzte Byte eines Frames mit korrektem CRC ist
         -- rd_en : out std_logic;                    -- Lesefreigabe (optional, da Lesen automatisch bei rd_valid='1' erfolgt)
 
         -- -----------------------------------------------------------------
@@ -87,6 +89,8 @@ begin
 
     can_read <= '1' when (rd_active = '1' and empty_int = '0') else '0';
     rd_dest_port_en <= dest_port_reg when rd_valid_reg = '1' else (others => '0');
+
+    crc_valid_out <= '1' when (rd_valid_reg = '1' and eof = '1' and crc_valid = '1') else '0'; ---TBD NOCH nicht fertig
 
 
 

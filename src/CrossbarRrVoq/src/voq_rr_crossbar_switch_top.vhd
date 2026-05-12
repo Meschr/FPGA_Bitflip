@@ -74,82 +74,34 @@ entity voq_rr_crossbar_switch_top is
         -- =====================================================================
 
         -- Eingang 0: Frames von Port 0 fuer jeden der 4 Ausgaenge
-        wr_en_in0   : in std_logic_vector(3 downto 0);       -- Schreibfreigabe    
-
-        wr_data_in0_out0 : in std_logic_vector(7 downto 0);  -- Schreibfreigabe
-        wr_eof_in0_out0  : in std_logic;                     -- '1' beim letzten Byte des Frames
-
-        wr_data_in0_out1 : in std_logic_vector(7 downto 0);
-        wr_eof_in0_out1  : in std_logic;
-
-        wr_data_in0_out2 : in std_logic_vector(7 downto 0);
-        wr_eof_in0_out2  : in std_logic;
-
-        wr_data_in0_out3 : in std_logic_vector(7 downto 0);
-        wr_eof_in0_out3  : in std_logic;
-
-
+        wr_en_in0   : in std_logic_vector(3 downto 0);       -- Schreibfreigabe   
+        wr_data_in0 : in std_logic_vector(7 downto 0);  -- Datenbyte
+        wr_eof_in0  : in std_logic;                     -- '1' beim letzten Byte des Frames
 
 
 
 
         -- Eingang 1: Frames von Port 1 fuer jeden der 4 Ausgaenge
-        wr_en_in1   : in std_logic_vector(3 downto 0);    
-
-        wr_data_in1_out0 : in std_logic_vector(7 downto 0);
-        wr_eof_in1_out0  : in std_logic;
-
-        wr_data_in1_out1 : in std_logic_vector(7 downto 0);
-        wr_eof_in1_out1  : in std_logic;
-
-        wr_data_in1_out2 : in std_logic_vector(7 downto 0);
-        wr_eof_in1_out2  : in std_logic;
-
-        wr_data_in1_out3 : in std_logic_vector(7 downto 0);
-        wr_eof_in1_out3  : in std_logic;
-
-
-
+        wr_en_in1   : in std_logic_vector(3 downto 0);       -- Schreibfreigabe   
+        wr_data_in1 : in std_logic_vector(7 downto 0);  -- Datenbyte
+        wr_eof_in1  : in std_logic; 
 
 
 
 
         -- Eingang 2: Frames von Port 2 fuer jeden der 4 Ausgaenge
-        wr_en_in2   : in std_logic_vector(3 downto 0);
-
-        wr_data_in2_out0 : in std_logic_vector(7 downto 0);
-        wr_eof_in2_out0  : in std_logic;
-
-        wr_data_in2_out1 : in std_logic_vector(7 downto 0);
-        wr_eof_in2_out1  : in std_logic;
-
-        wr_data_in2_out2 : in std_logic_vector(7 downto 0);
-        wr_eof_in2_out2  : in std_logic;
-
-        wr_data_in2_out3 : in std_logic_vector(7 downto 0);
-        wr_eof_in2_out3  : in std_logic;
-
-
+        wr_en_in2   : in std_logic_vector(3 downto 0);       -- Schreibfreigabe   
+        wr_data_in2 : in std_logic_vector(7 downto 0);  -- Datenbyte
+        wr_eof_in2  : in std_logic; 
 
 
 
 
 
         -- Eingang 3: Frames von Port 3 fuer jeden der 4 Ausgaenge
-        wr_en_in3   : in std_logic_vector(3 downto 0);
-
-
-        wr_data_in3_out0 : in std_logic_vector(7 downto 0);
-        wr_eof_in3_out0  : in std_logic;
-
-        wr_data_in3_out1 : in std_logic_vector(7 downto 0);
-        wr_eof_in3_out1  : in std_logic;
-
-        wr_data_in3_out2 : in std_logic_vector(7 downto 0);
-        wr_eof_in3_out2  : in std_logic;
-
-        wr_data_in3_out3 : in std_logic_vector(7 downto 0);
-        wr_eof_in3_out3  : in std_logic;
+        wr_en_in3   : in std_logic_vector(3 downto 0);       -- Schreibfreigabe   
+        wr_data_in3 : in std_logic_vector(7 downto 0);  -- Datenbyte
+        wr_eof_in3  : in std_logic;
 
 
 
@@ -337,21 +289,21 @@ begin
             flush       => flush_out0,
 
             -- Schreibports: Eingang 0..3, alle fuer Ausgang 0
-            wr_data_in0 => wr_data_in0_out0,
+            wr_data_in0 =>wr_data_in0,
             wr_en_in0   => wr_en_in0(0),
-            wr_eof_in0  => wr_eof_in0_out0,
+            wr_eof_in0  => wr_eof_in0,
 
-            wr_data_in1 => wr_data_in1_out0,
+            wr_data_in1 => wr_data_in1,
             wr_en_in1   => wr_en_in1(0),
-            wr_eof_in1  => wr_eof_in1_out0,
+            wr_eof_in1  => wr_eof_in1,
 
-            wr_data_in2 => wr_data_in2_out0,
+            wr_data_in2 => wr_data_in2,
             wr_en_in2   => wr_en_in2(0),
-            wr_eof_in2  => wr_eof_in2_out0,
+            wr_eof_in2  => wr_eof_in2,
 
-            wr_data_in3 => wr_data_in3_out0,
+            wr_data_in3 => wr_data_in3,
             wr_en_in3   => wr_en_in3(0),
-            wr_eof_in3  => wr_eof_in3_out0,
+            wr_eof_in3  => wr_eof_in3,
 
             -- One-Hot Lesefreigabe: kommt vom RR-Arbiter (via rd_en_o0)
             rd_en       => rd_en_o0,
@@ -406,21 +358,21 @@ begin
             reset       => reset,
             flush       => flush_out1,
 
-            wr_data_in0 => wr_data_in0_out1,
+            wr_data_in0 =>wr_data_in0,
             wr_en_in0   => wr_en_in0(1),
-            wr_eof_in0  => wr_eof_in0_out1,
+            wr_eof_in0  => wr_eof_in0,
 
-            wr_data_in1 => wr_data_in1_out1,
+            wr_data_in1 => wr_data_in1,
             wr_en_in1   => wr_en_in1(1),
-            wr_eof_in1  => wr_eof_in1_out1,
+            wr_eof_in1  => wr_eof_in1,
 
-            wr_data_in2 => wr_data_in2_out1,
+            wr_data_in2 => wr_data_in2,
             wr_en_in2   => wr_en_in2(1),
-            wr_eof_in2  => wr_eof_in2_out1,
+            wr_eof_in2  => wr_eof_in2,
 
-            wr_data_in3 => wr_data_in3_out1,
+            wr_data_in3 => wr_data_in3,
             wr_en_in3   => wr_en_in3(1),
-            wr_eof_in3  => wr_eof_in3_out1,
+            wr_eof_in3  => wr_eof_in3,
 
             rd_en       => rd_en_o1,
 
@@ -467,21 +419,21 @@ begin
             reset       => reset,
             flush       => flush_out2,
 
-            wr_data_in0 => wr_data_in0_out2,
+            wr_data_in0 => wr_data_in0,
             wr_en_in0   => wr_en_in0(2),
-            wr_eof_in0  => wr_eof_in0_out2,
+            wr_eof_in0  => wr_eof_in0,
 
-            wr_data_in1 => wr_data_in1_out2,
+            wr_data_in1 => wr_data_in1,
             wr_en_in1   => wr_en_in1(2),
-            wr_eof_in1  => wr_eof_in1_out2,
+            wr_eof_in1  => wr_eof_in1,
 
-            wr_data_in2 => wr_data_in2_out2,
+            wr_data_in2 => wr_data_in2,
             wr_en_in2   => wr_en_in2(2),
-            wr_eof_in2  => wr_eof_in2_out2,
+            wr_eof_in2  => wr_eof_in2,
 
-            wr_data_in3 => wr_data_in3_out2,
+            wr_data_in3 => wr_data_in3,
             wr_en_in3   => wr_en_in3(2),
-            wr_eof_in3  => wr_eof_in3_out2,
+            wr_eof_in3  => wr_eof_in3,
 
             rd_en       => rd_en_o2,
 
@@ -529,21 +481,21 @@ begin
             reset       => reset,
             flush       => flush_out3,
 
-            wr_data_in0 => wr_data_in0_out3,
+            wr_data_in0 =>wr_data_in0,
             wr_en_in0   => wr_en_in0(3),
-            wr_eof_in0  => wr_eof_in0_out3,
+            wr_eof_in0  => wr_eof_in0,
 
-            wr_data_in1 => wr_data_in1_out3,
+            wr_data_in1 => wr_data_in1,
             wr_en_in1   => wr_en_in1(3),
-            wr_eof_in1  => wr_eof_in1_out3,
+            wr_eof_in1  => wr_eof_in1,
 
-            wr_data_in2 => wr_data_in2_out3,
+            wr_data_in2 => wr_data_in2,
             wr_en_in2   => wr_en_in2(3),
-            wr_eof_in2  => wr_eof_in2_out3,
+            wr_eof_in2  => wr_eof_in2,
 
-            wr_data_in3 => wr_data_in3_out3,
+            wr_data_in3 => wr_data_in3,
             wr_en_in3   => wr_en_in3(3),
-            wr_eof_in3  => wr_eof_in3_out3,
+            wr_eof_in3  => wr_eof_in3,
 
             rd_en       => rd_en_o3,
 

@@ -24,16 +24,15 @@ entity frame_handler is
         data_in    : in std_logic_vector(7 downto 0);
         data_valid : in std_logic;
         buffer_dest_port : in std_logic_vector(3 downto 0);
+        buffer_dest_port_flag : in std_logic;
 
 
         --outputs
         data_out    : out std_logic_vector(7 downto 0);
-        dst_port    : out std_logic_vector(3 downto 0);
-        crc_valid   : out  std_logic;                                     -- signal for MAC learning to store dst_adr
         eof_handler : out std_logic;                                     -- for voq
-        frame_rdy_handler : out std_logic;                                     -- for voq
-        full_buffer : out std_logic                                     -- for fcs        
-               
+        dst_port    : out std_logic_vector(3 downto 0);
+        crc_valid   : out  std_logic                                  -- signal for MAC learning to store dst_adr
+              
     );
 end entity;
 
@@ -54,13 +53,13 @@ architecture rtl of frame_handler is
     signal bit_valid_int  : std_logic := '0';
     signal eof_int_delayed : std_logic := '0';  -- EOF synchronized with FCS output
     
-    signal buffer_dest_port_flag : std_logic := '0';
+    
     signal buffer_flush : std_logic := '0';
     
 begin
 
     
-    buffer_dest_port_flag <= fcs_ok_int;
+    
     buffer_flush <= fcs_error_int;
     crc_valid <= fcs_ok_int;
 
@@ -118,7 +117,8 @@ begin
         -- outputs
         rd_data     => data_out,
         rd_eof      => eof_handler, -- pulse when EOF is detected
-        rd_dest_port_en => dst_port     -- enable singal for the voq
+        rd_dest_port_en => dst_port,     -- enable singal for the voq
+        crc_valid   => crc_valid      -- pulse when FCS is correct, used for MAC learning
     );
 
 end architecture rtl;
