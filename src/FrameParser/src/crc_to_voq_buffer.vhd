@@ -130,6 +130,7 @@ begin
 
 
      ptr_proc : process(clk)
+        variable count_next : unsigned(count'range);
     begin
         if rising_edge(clk) then
             if reset = '1' or flush = '1' then
@@ -152,20 +153,24 @@ begin
                     dest_port_reg <= (others => '0');
                 end if;
                 
-                -- Pointer- und Belegungszaehler aktualisieren:
-                if can_write = '1' and can_read = '0' then
-                    -- Nur Schreiben: wr_ptr erhoehen, count erhoehen
+                -- Pointer- und Belegungszaehler aktualisieren
+                -- Schreiben immer zaehlen, Lesen nur wenn nicht EOF
+                if can_write = '1' then
                     wr_ptr <= wr_ptr + 1;
-                    count  <= count + 1;
-                elsif can_write = '0' and can_read = '1' then
-                    -- Nur Lesen: rd_ptr erhoehen, count verringern
-                    rd_ptr <= rd_ptr + 1;
-                    count  <= count - 1;
-                elsif can_write = '1' and can_read = '1' then
-                    -- Gleichzeitiges Schreiben und Lesen: beide Pointer erhoehen, count bleibt gleich
-                    wr_ptr <= wr_ptr + 1;
+                end if;
+
+                if can_read = '1' and eof = '0' then
                     rd_ptr <= rd_ptr + 1;
                 end if;
+
+                count_next := count;
+                if can_write = '1' then
+                    count_next := count_next + 1;
+                end if;
+                if can_read = '1' and eof = '0' then
+                    count_next := count_next - 1;
+                end if;
+                count <= count_next;
 
             end if;
         end if;
