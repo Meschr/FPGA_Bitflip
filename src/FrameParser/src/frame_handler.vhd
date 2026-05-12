@@ -31,7 +31,9 @@ entity frame_handler is
         data_out    : out std_logic_vector(7 downto 0);
         eof_handler : out std_logic;                                     -- for voq
         dst_port    : out std_logic_vector(3 downto 0);
-        crc_valid   : out  std_logic                                  -- signal for MAC learning to store dst_adr
+        crc_valid   : out  std_logic;                                  -- signal for MAC learning to store dst_adr
+        frame_rdy_handler : out std_logic;                              -- frame ready signal
+        full_buffer : out std_logic_vector(3 downto 0)                 -- buffer full status per port
               
     );
 end entity;
@@ -117,7 +119,7 @@ begin
         -- outputs
         rd_data     => data_out,
         rd_eof      => eof_handler, -- pulse when EOF is detected
-        rd_dest_port_en => dst_port,     -- enable singal for the voq
+        rd_en_dest_port  => dst_port,     -- enable singal for the voq
         crc_valid   => crc_valid      -- pulse when FCS is correct, used for MAC learning
     );
 
