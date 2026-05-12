@@ -62,7 +62,7 @@ begin
 
     
     
-    buffer_flush <= fcs_error_int;
+    -- buffer_flush <= fcs_error_int;
     crc_valid <= fcs_ok_int;
 
     u_frameparser : entity work.frame_parser
