@@ -101,7 +101,7 @@ end process;
         -- end_of_frame marks data_valid falling edge from parser,
         -- so crc_reg already contains the CRC after the last valid byte.
 
-        wr_en <= '1';
+        wr_en <= '1' when (end_of_frame = '0') else '0'; -- valid data output until end_of_frame
         data_out <= data_in; -- passthrough of input data
 
         if end_of_frame = '1' then

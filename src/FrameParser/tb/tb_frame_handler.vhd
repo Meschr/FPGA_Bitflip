@@ -17,6 +17,7 @@ architecture sim of tb_frame_handler is
   signal data_in    : std_logic_vector(7 downto 0) := (others => '0');
   signal data_valid : std_logic := '0';
   signal buffer_dest_port : std_logic_vector(3 downto 0) := (others => '0');
+  signal buffer_dest_port_flag : std_logic := '1';
 
   signal data_out           : std_logic_vector(7 downto 0);
   signal dst_port           : std_logic_vector(3 downto 0);
@@ -193,17 +194,18 @@ architecture sim of tb_frame_handler is
 begin
   dut : entity work.frame_handler
     port map (
-      clk               => clk,
-      reset             => reset,
-      data_in           => data_in,
-      data_valid        => data_valid,
-      buffer_dest_port  => buffer_dest_port,
-      data_out          => data_out,
-      dst_port          => dst_port,
-      crc_valid         => crc_valid,
-      eof_handler       => eof_handler,
-      frame_rdy_handler => frame_rdy_handler,
-      full_buffer       => full_buffer
+      clk                    => clk,
+      reset                  => reset,
+      data_in                => data_in,
+      data_valid             => data_valid,
+      buffer_dest_port       => buffer_dest_port,
+      buffer_dest_port_flag  => buffer_dest_port_flag,
+      data_out               => data_out,
+      dst_port               => dst_port,
+      crc_valid              => crc_valid,
+      eof_handler            => eof_handler,
+      frame_rdy_handler      => frame_rdy_handler,
+      full_buffer            => full_buffer
     );
 
   clk_gen : process
@@ -221,24 +223,34 @@ begin
     reset <= '1';
     data_in <= (others => '0');
     data_valid <= '0';
+      buffer_dest_port_flag <= '0';
     wait for 4 * CLK_PERIOD;
     wait until rising_edge(clk);
     reset <= '0';
     wait until rising_edge(clk);
 
     buffer_dest_port <= "0001";
+      buffer_dest_port_flag <= '1';
+      wait until rising_edge(clk);
+      buffer_dest_port_flag <= '0';
     -- Test Frame 1: Port 1
     transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1");
     expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
               "0001", FRAME_OK, "Port 1 output");
 
     buffer_dest_port <= "0010";
+      buffer_dest_port_flag <= '1';
+      wait until rising_edge(clk);
+      buffer_dest_port_flag <= '0';
     -- Test Frame 2: Port 2
     transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 2");
     expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
               "0010", FRAME_OK, "Port 2 output");
 
     buffer_dest_port <= "0100";
+      buffer_dest_port_flag <= '1';
+      wait until rising_edge(clk);
+      buffer_dest_port_flag <= '0';
     -- Test Frame 3: Port 3
     transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 3");
     expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
@@ -251,6 +263,9 @@ begin
     -- Reset and test again (Port 1)
     reset <= '1';
     wait for 3 * CLK_PERIOD;
+      buffer_dest_port_flag <= '1';
+      wait until rising_edge(clk);
+      buffer_dest_port_flag <= '0';
     wait until rising_edge(clk);
     reset <= '0';
     wait until rising_edge(clk);

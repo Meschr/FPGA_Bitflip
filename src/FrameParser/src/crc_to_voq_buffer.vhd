@@ -17,7 +17,8 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         wr_en         : in  std_logic;                    -- Schreibfreigabe
         wr_data       : in  std_logic_vector(7 downto 0); -- Datenbyte
-        wr_eof        : in  std_logic;                    -- '1' wenn dies das letzte Byte des Frames ist
+        wr_eof        : in  std_logic;     
+        crc_valid     : in  std_logic;                      -- '1' wenn dies das letzte Byte des Frames ist
 
 
         dest_port       : in  std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames (nur gueltig bei wr_eof='1')                  
@@ -28,7 +29,8 @@ entity crc_to_voq_buffer is
         -- -----------------------------------------------------------------
         rd_data       : out std_logic_vector(7 downto 0); -- Ausgelesenes Datenbyte
         rd_eof        : out std_logic;                    -- '1' wenn dies das EOF-Byte ist (nur gueltig wenn rd_valid='1')
-        rd_dest_port_en  : out std_logic_vector(3 downto 0) -- Zielport des aktuellen Frames
+        rd_en_dest_port  : out std_logic_vector(3 downto 0); -- Zielport des aktuellen Frames
+        crc_valid_out    : out std_logic                    -- '1' wenn das gelesene Byte das letzte Byte eines Frames mit korrektem CRC ist
         -- rd_en : out std_logic;                    -- Lesefreigabe (optional, da Lesen automatisch bei rd_valid='1' erfolgt)
 
         -- -----------------------------------------------------------------
@@ -86,7 +88,9 @@ begin
     can_write <= '1' when (wr_en = '1' and full_int = '0') else '0';
 
     can_read <= '1' when (rd_active = '1' and empty_int = '0') else '0';
-    rd_dest_port_en <= dest_port_reg when rd_valid_reg = '1' else (others => '0');
+    rd_en_dest_port <= dest_port_reg when rd_valid_reg = '1' else (others => '0');
+
+    crc_valid_out <= '1' when (rd_valid_reg = '1' and eof = '1' and crc_valid = '1') else '0'; ---TBD NOCH nicht fertig
 
 
 
@@ -126,6 +130,7 @@ begin
 
 
      ptr_proc : process(clk)
+        variable count_next : unsigned(count'range);
     begin
         if rising_edge(clk) then
             if reset = '1' or flush = '1' then
@@ -148,20 +153,24 @@ begin
                     dest_port_reg <= (others => '0');
                 end if;
                 
-                -- Pointer- und Belegungszaehler aktualisieren:
-                if can_write = '1' and can_read = '0' then
-                    -- Nur Schreiben: wr_ptr erhoehen, count erhoehen
+                -- Pointer- und Belegungszaehler aktualisieren
+                -- Schreiben immer zaehlen, Lesen nur wenn nicht EOF
+                if can_write = '1' then
                     wr_ptr <= wr_ptr + 1;
-                    count  <= count + 1;
-                elsif can_write = '0' and can_read = '1' then
-                    -- Nur Lesen: rd_ptr erhoehen, count verringern
-                    rd_ptr <= rd_ptr + 1;
-                    count  <= count - 1;
-                elsif can_write = '1' and can_read = '1' then
-                    -- Gleichzeitiges Schreiben und Lesen: beide Pointer erhoehen, count bleibt gleich
-                    wr_ptr <= wr_ptr + 1;
+                end if;
+
+                if can_read = '1' and eof = '0' then
                     rd_ptr <= rd_ptr + 1;
                 end if;
+
+                count_next := count;
+                if can_write = '1' then
+                    count_next := count_next + 1;
+                end if;
+                if can_read = '1' and eof = '0' then
+                    count_next := count_next - 1;
+                end if;
+                count <= count_next;
 
             end if;
         end if;
