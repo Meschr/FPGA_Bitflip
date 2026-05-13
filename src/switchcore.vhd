@@ -11,11 +11,12 @@ entity switchcore is
 				--Activity indicators
 				link_sync:		in	std_logic_vector(3 downto 0);	--High indicates a peer connection at the physical layer. 
 				
-				--Four GMII interfaces
-				tx_data:			out	std_logic_vector(31 downto 0);	--(7 downto 0)=TXD0...(31 downto 24=TXD3)
-				tx_ctrl:			out	std_logic_vector(3 downto 0);	--(0)=TXC0...(3=TXC3)
+				--Four GMII interfaces				
 				rx_data:			in	std_logic_vector(31 downto 0);	--(7 downto 0)=RXD0...(31 downto 24=RXD3)
-				rx_ctrl:			in	std_logic_vector(3 downto 0)	--(0)=RXC0...(3=RXC3)
+				rx_ctrl:			in	std_logic_vector(3 downto 0);	--(0)=RXC0...(3=RXC3)
+
+				tx_data:			out	std_logic_vector(31 downto 0);	--(7 downto 0)=TXD0...(31 downto 24=TXD3)
+				tx_ctrl:			out	std_logic_vector(3 downto 0)	--(0)=TXC0...(3=TXC3)
 			);
 
 end switchcore;

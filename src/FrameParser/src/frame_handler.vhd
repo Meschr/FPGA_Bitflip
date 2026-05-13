@@ -16,24 +16,24 @@ use ieee.numeric_std.all;
 
 entity frame_handler is
     port (
-        clk   : in std_logic;
-        
-        reset : in std_logic;
+        clk   : in std_logic;       -- clk
+
+        reset : in std_logic;       -- reset
         
         -- inputs
-        data_in    : in std_logic_vector(7 downto 0);
-        data_valid : in std_logic;
-        buffer_dest_port : in std_logic_vector(3 downto 0);
-        buffer_dest_port_flag : in std_logic;
+        data_in    : in std_logic_vector(7 downto 0);   -- Rx_0 [7:0]
+        data_valid : in std_logic;                      -- Rx_0_ctrl
+        buffer_dest_port : in std_logic_vector(3 downto 0); -- port_addr [3:0]
+        buffer_dest_port_flag : in std_logic;               -- valid
 
 
         --outputs
-        data_out    : out std_logic_vector(7 downto 0);
-        eof_handler : out std_logic;                                     -- for voq
-        dst_port    : out std_logic_vector(3 downto 0);
-        crc_valid   : out  std_logic;                                  -- signal for MAC learning to store dst_adr
-        frame_rdy_handler : out std_logic;                              -- frame ready signal
-        full_buffer : out std_logic_vector(3 downto 0)                 -- buffer full status per port
+        data_out    : out std_logic_vector(7 downto 0);     -- data_o_0[7:0]
+        eof_handler : out std_logic;                        -- eof_handler
+        dst_port    : out std_logic_vector(3 downto 0);     -- dst_port [3:0]           
+        crc_valid   : out  std_logic;                       -- crc_valid 
+        frame_rdy_handler : out std_logic;                  -- wr_en
+        -- full_buffer : out std_logic_vector(3 downto 0)      -- xxxxxxxx
               
     );
 end entity;
@@ -71,17 +71,17 @@ begin
         clk       => clk,
         reset     => reset,
             
-        data_in   => data_in,
-        data_valid => data_valid,           
+        data_in   => data_in,                   -- Rx_0 [7:0]
+        data_valid => data_valid,               -- Rx_0_ctrl
 
         -- outputs
-        data_out  => data_int,
-        sof       => sof_int,
-        eof       => eof_int,
-        dst_mac   => dst_mac_int,
-        dst_valid => dst_valid_int,
-        src_mac   => src_mac_int,
-        src_valid => src_valid_int
+        data_out  => data_int,                  -- data_int [7:0]
+        sof       => sof_int,                   -- sof_int
+        eof       => eof_int,                   -- eof_int
+        dst_mac   => dst_mac_int,               -- dst_mac[47:0]
+        dst_valid => dst_valid_int,             -- dst_valid
+        src_mac   => src_mac_int,               -- src_mac[47:0]
+        src_valid => src_valid_int              -- src_valid
     );
     
     u_fcscheck : entity work.fcs_check_parallel
@@ -96,9 +96,9 @@ begin
         -- outputs
         fcs_error      => fcs_error_int,
         fcs_ok         => fcs_ok_int,
-        data_out       => data_int_crc,
-        wr_en          => bit_valid_int,
-        eof_out        => eof_int_delayed
+        data_out       => data_int_crc,             -- wr_data [7:0]
+        wr_en          => bit_valid_int,            -- wr_en
+        eof_out        => eof_int_delayed           -- wr_eof
     );
 
     u_crc_buffer : entity work.crc_to_voq_buffer
@@ -107,20 +107,21 @@ begin
         -- inputs
         clk         => clk,
         reset       => reset,
-        flush       => buffer_flush,
+        flush       => buffer_flush,            -- flush
 
-        wr_en       => bit_valid_int, 
-        wr_data     => data_int_crc,
-        wr_eof      => eof_int_delayed,    -- Synchronized EOF from FCS checker
+        wr_en       => bit_valid_int,           -- wr_en
+        wr_data     => data_int_crc,            -- wr_data [7:0]
+        wr_eof      => eof_int_delayed,         -- wr_eof
 
-        dest_port   => buffer_dest_port,
-        dest_port_flag => buffer_dest_port_flag,
+        dest_port   => buffer_dest_port,        -- port_addr [3:0]
+        dest_port_flag => buffer_dest_port_flag,-- valid
 
         -- outputs
-        rd_data     => data_out,
-        rd_eof      => eof_handler, -- pulse when EOF is detected
-        rd_en_dest_port  => dst_port,     -- enable singal for the voq
-        crc_valid   => crc_valid      -- pulse when FCS is correct, used for MAC learning
+        rd_data     => data_out,        -- data_o_0 [7:0]
+        rd_eof      => eof_handler,     -- eof_handler
+        rd_en_dest_port  => dst_port,     --dst_port [3:0]
+        crc_valid   => crc_valid        -- crc_valid
+        --wr_en ?! für voq
     );
 
 end architecture rtl;
