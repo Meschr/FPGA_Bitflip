@@ -74,7 +74,7 @@ BEGIN
   ------------------------------------------------------------------
   seq : PROCESS (clk, reset)
   BEGIN
-    IF reset = '1' THEN
+    IF reset = '0' THEN
       crc_reg <= (OTHERS => '0');
       checking <= '0';
       fcs_error <= '0';
