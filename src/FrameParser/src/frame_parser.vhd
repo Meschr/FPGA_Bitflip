@@ -75,12 +75,15 @@ BEGIN
               state <= ERR;
             ELSIF byte_cnt = 6 THEN -- Seventh preamble byte received, next byte must be SFD.
               state <= SFD;
+              data_out <= data_in; -- Forward preamble bytes to FCS checker
             ELSE
+              data_out <= data_in; -- Forward preamble bytes to FCS checker
               state <= PREAMBLE;
             END IF;
 
           WHEN SFD => -- Expecting the Start of Frame Delimiter (SFD) which should be 0xD5.
             IF data_in = x"D5" THEN
+              data_out <= data_in; -- Forward SFD to FCS checker
               state <= DST;
             ELSE -- If we receive a byte that is not 0xD5, its error
               state <= ERR;
@@ -88,7 +91,7 @@ BEGIN
 
           WHEN DST =>
             data_out <= data_in; -- from here on we write to the FCS checker
-            byte_cnt <= byte_cnt + 1;
+
             IF byte_cnt = 8 THEN
               sof <= '1'; -- Align SOF with first byte forwarded to CRC checker
             END IF;
@@ -105,12 +108,12 @@ BEGIN
 
             IF byte_cnt = 13 THEN
               state <= SRC;
-              dst_valid <= '1';
-              dst_mac <= dst_buf;
             END IF;
 
-          WHEN SRC => -- set variable for MAC Learning "1" we are writing src_mac now
+          WHEN SRC => 
             data_out <= data_in;
+            dst_valid <= '1';
+            dst_mac <= dst_buf;
 
             CASE byte_cnt IS
               WHEN 14 => src_buf(47 DOWNTO 40) <= data_in;
@@ -123,12 +126,13 @@ BEGIN
             END CASE;
 
             IF byte_cnt = 19 THEN
-              state <= ETHER_PAYLOAD_FCS;
-              src_valid <= '1';
-              src_mac <= src_buf;
+            state <= ETHER_PAYLOAD_FCS;
             END IF;
 
           WHEN ETHER_PAYLOAD_FCS =>
+            src_valid <= '1';
+            src_mac <= src_buf;
+
             -- Forward bytes while data_valid is high.
             data_out <= data_in;
             byte_cnt <= byte_cnt + 1;

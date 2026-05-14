@@ -17,7 +17,7 @@ ARCHITECTURE tb OF tb_new_frame_handler IS
 
     -- Signals for DUT ports
     SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '1';
+    SIGNAL reset : STD_LOGIC := '0';
 
     -- Inputs to frame_handler
     SIGNAL data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
@@ -124,13 +124,13 @@ BEGIN
         VARIABLE frame_index : NATURAL := 0;
     BEGIN
         -- Reset the DUT
-        reset <= '1';
+        reset <= '0';
         data_in <= (OTHERS => '0');
         data_valid <= '0';
         buffer_dest_port <= (OTHERS => '0');
         buffer_dest_port_flag <= '0';
         WAIT FOR 3 * CLK_PERIOD;
-        reset <= '0';
+        reset <= '1';
 
         WAIT FOR 4 * CLK_PERIOD;
 
@@ -165,6 +165,9 @@ BEGIN
                     readline(stimulus_file, frame_line);
                     send_wire_frame(clk, data_in, data_valid, frame_line);
                 END IF;
+
+                -- Inter-frame gap: wait 20 clock cycles
+                WAIT FOR 20 * CLK_PERIOD;
 
                 IF NOT endfile(stimulus_file) THEN
                     readline(stimulus_file, blank_line);

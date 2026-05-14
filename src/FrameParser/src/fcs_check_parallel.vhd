@@ -85,6 +85,8 @@ BEGIN
 
       fcs_error <= '0'; -- default
       fcs_ok <= '0'; -- default
+      
+      data_out <= data_in; -- passthrough of input data
 
       -- Start-of-frame sets control state, but does NOT block processing the bit
       IF start_of_frame = '1' THEN
