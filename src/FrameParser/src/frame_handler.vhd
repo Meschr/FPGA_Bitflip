@@ -15,11 +15,9 @@ ENTITY frame_handler IS
         buffer_dest_port_flag : IN STD_LOGIC;
         --outputs
         data_out : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
-        eof_handler : OUT STD_LOGIC; -- for voq
+        eof_handler : OUT STD_LOGIC;                 -- for voq
         dst_port : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        crc_valid : OUT STD_LOGIC; -- signal for MAC learning to store dst_adr
-        frame_rdy : OUT STD_LOGIC; -- frame ready signal
-        full_buffer : OUT STD_LOGIC_VECTOR(3 DOWNTO 0); -- buffer full status per port
+        crc_valid : OUT STD_LOGIC;                   -- signal for MAC learning to store dst_adr
         dst_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);
         dst_valid : OUT STD_LOGIC;
         src_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);
@@ -32,10 +30,6 @@ ARCHITECTURE rtl OF frame_handler IS
     SIGNAL sof_int : STD_LOGIC := '0'; -- Start of Frame
     SIGNAL eof_int : STD_LOGIC := '0'; -- End of Frame
     SIGNAL data_int : STD_LOGIC_VECTOR(7 DOWNTO 0);
-    SIGNAL dst_mac_int : STD_LOGIC_VECTOR(47 DOWNTO 0) := (OTHERS => '0'); -- Destination MAC from parser
-    SIGNAL dst_valid_int : STD_LOGIC := '0'; -- Destination MAC valid pulse
-    SIGNAL src_mac_int : STD_LOGIC_VECTOR(47 DOWNTO 0) := (OTHERS => '0'); -- Source MAC from parser
-    SIGNAL src_valid_int : STD_LOGIC := '0'; -- Source MAC valid pulse
 
     -- output fcs_check_parallel    
     SIGNAL data_int_crc : STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -63,10 +57,10 @@ BEGIN
             data_out => data_int,
             sof => sof_int,
             eof => eof_int,
-            dst_mac => dst_mac_int,
-            dst_valid => dst_valid_int,
-            src_mac => src_mac_int,
-            src_valid => src_valid_int
+            dst_mac => dst_mac,
+            dst_valid => dst_valid,
+            src_mac => src_mac,
+            src_valid => src_valid
         );
 
     u_fcscheck : ENTITY work.fcs_check_parallel
