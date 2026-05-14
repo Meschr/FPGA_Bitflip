@@ -2,16 +2,6 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 
---architecture Struktur of TopLevel is
--- Komponente deklarieren
---  component Untermodul is
---    port ( a : in std_logic; b : out std_logic );
---end component;
---begin
---   -- Instanz erzeugen (instanziieren)
--- instanz_name : Untermodul
---   port map ( a => signal_a, b => signal_b );
---end architecture;
 ENTITY frame_handler IS
     PORT (
         clk : IN STD_LOGIC;
