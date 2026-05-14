@@ -1,0 +1,15 @@
+# VHDL Language Server configuration for FPGA_Bitflip project
+# File names are either absolute or relative to the parent folder of the vhdl_ls.toml file
+
+[libraries]
+
+# Main work library - contains all design sources
+defaultlib.files = [
+  'src/switchcore.vhd',
+  'src/CrossbarRrVoq/src/**/*.vhd',
+  'src/FrameParser/src/**/*.vhd',
+  'src/MacClever/src/**/*.vhd',
+  'src/CrossbarRrVoq/tb/**/*.vhd',
+  'src/FrameParser/tb/**/*.vhd',
+  'src/MacClever/tb/**/*.vhd',
+]

@@ -28,7 +28,6 @@ output_files/
 
 # GHDL work library (compiled .cf and object files)
 work/
-*.toml
 
 # VCD / GHW waveform dumps
 waves/
