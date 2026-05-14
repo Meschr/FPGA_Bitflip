@@ -38,6 +38,9 @@ BEGIN
 			reset => reset,
 			data_in => rx_data(7 DOWNTO 0),
 			data_valid => rx_ctrl(0),
+			buffer_dest_port => dst0,
+			buffer_dest_port_flag => dst_valid0,
+			eof_handler => , -- connections not ready yet
 			data_out => handled_frame0,
 			dst_mac => dst_mac0,
 			dst_valid => dst_valid0,

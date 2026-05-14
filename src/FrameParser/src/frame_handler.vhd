@@ -29,8 +29,11 @@ ENTITY frame_handler IS
         dst_port : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         crc_valid : OUT STD_LOGIC; -- signal for MAC learning to store dst_adr
         frame_rdy : OUT STD_LOGIC; -- frame ready signal
-        full_buffer : OUT STD_LOGIC_VECTOR(3 DOWNTO 0) -- buffer full status per port
-
+        full_buffer : OUT STD_LOGIC_VECTOR(3 DOWNTO 0); -- buffer full status per port
+        dst_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);
+        dst_valid : OUT STD_LOGIC;
+        src_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);
+        src_valid : OUT STD_LOGIC
     );
 END ENTITY;
 

@@ -37,7 +37,7 @@ BEGIN
   ------------------------------------------------------------------
   -- Combinational CRC next-state (8 bits per cycle, MSB-first)
   ------------------------------------------------------------------
-  crc_comb : PROCESS (crc_reg, data_in, head_cnt, end_of_frame, bit_valid)
+  crc_comb : PROCESS (crc_reg, data_in, head_cnt, bit_valid)
     VARIABLE c : STD_LOGIC_VECTOR(31 DOWNTO 0);
     VARIABLE feedback : STD_LOGIC;
     VARIABLE din_eff : STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -99,8 +99,7 @@ BEGIN
         -- end_of_frame marks data_valid falling edge from parser,
         -- so crc_reg already contains the CRC after the last valid byte.
 
-        wr_en <= '1' WHEN (end_of_frame = '0') ELSE
-          '0'; -- valid data output until end_of_frame
+        wr_en <= not end_of_frame; -- valid data output until end_of_frame
         data_out <= data_in; -- passthrough of input data
 
         IF end_of_frame = '1' THEN

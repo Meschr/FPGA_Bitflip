@@ -4,8 +4,7 @@ USE ieee.numeric_std.ALL;
 
 ENTITY crc_to_voq_buffer IS
     GENERIC (
-        DEPTH : INTEGER := 64; -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
-        NUM_OUTPUTS : INTEGER := 4 -- Anzahl der Ziel-VOQs
+        DEPTH : INTEGER := 64 -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
     );
     PORT (
         clk : IN STD_LOGIC; -- Systemtakt
