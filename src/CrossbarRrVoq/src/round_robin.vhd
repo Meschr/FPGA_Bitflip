@@ -61,7 +61,6 @@ begin
     end process seq_proc;
 
     -- -------------------------------------------------------------------------
-
     -- Next-state logic. In IDLE, the search starts at rr_ptr_reg and checks all
     -- four FIFOs in round-robin order. In LOCKED, the grant is held until EOF.
     comb_proc : process (state_reg, rr_ptr_reg, sel_reg, frame_rdy, eof)
@@ -103,7 +102,6 @@ begin
     end process comb_proc;
 
     -- -------------------------------------------------------------------------
-    
     -- Drive mux select and indicate when the arbiter is locked to a frame.
     sel    <= std_logic_vector(sel_reg);
     active <= '1' when state_reg = LOCKED else '0';
