@@ -53,7 +53,7 @@ BEGIN
       src_valid <= '0';
       dst_mac <= (OTHERS => '0');
       src_mac <= (OTHERS => '0');
-
+    
     ELSIF rising_edge(clk) THEN
 
       data_out <= (OTHERS => '0');
@@ -122,11 +122,10 @@ BEGIN
               WHEN OTHERS => NULL;
             END CASE;
 
-            byte_cnt <= byte_cnt + 1;
-
             IF byte_cnt = 19 THEN
               state <= ETHER_PAYLOAD_FCS;
               src_valid <= '1';
+              src_mac <= src_buf;
             END IF;
 
           WHEN ETHER_PAYLOAD_FCS =>
