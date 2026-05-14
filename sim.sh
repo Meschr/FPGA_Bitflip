@@ -46,23 +46,26 @@ fi
 # Extrahiert alle Entity-Namen, die eine Datei definiert
 extract_entity_names() {
     local file="$1"
-    grep -i "^[[:space:]]*entity[[:space:]]" "$file" 2>/dev/null | \
-        sed -E 's/^[[:space:]]*entity[[:space:]]+([a-zA-Z0-9_]+).*/\1/' | \
-        tr '[:upper:]' '[:lower:]'
+    awk 'BEGIN { IGNORECASE = 1 }
+        /^[[:space:]]*entity[[:space:]]+[a-zA-Z0-9_]+[[:space:]]+is([[:space:]]|;|$)/ {
+            print tolower($2)
+        }' "$file" 2>/dev/null
 }
 
 # Extrahiert alle Abhängigkeiten
 extract_dependencies() {
     local file="$1"
-    (
-        # Match: entity work.entity_name
-        grep -i "entity[[:space:]]*work\." "$file" 2>/dev/null | \
-            sed -E 's/.*entity[[:space:]]*work\.([a-zA-Z0-9_]+).*/\1/'
-        
-        # Match: instance_name : component_name port map
-        grep -iE "[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*[a-zA-Z0-9_]+[[:space:]]+(port|generic)[[:space:]]*map" "$file" 2>/dev/null | \
-            sed -E 's/[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*([a-zA-Z0-9_]+).*/\1/'
-    ) | tr '[:upper:]' '[:lower:]' | sort | uniq
+    awk 'BEGIN { IGNORECASE = 1 }
+        /entity[[:space:]]*work\.[a-zA-Z0-9_]+/ {
+            if (match($0, /entity[[:space:]]*work\.([a-zA-Z0-9_]+)/, m)) {
+                print tolower(m[1])
+            }
+        }
+        /^[[:space:]]*[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*[a-zA-Z0-9_]+[[:space:]]+(port|generic)[[:space:]]*map/ {
+            if (match($0, /^[[:space:]]*[a-zA-Z0-9_]+[[:space:]]*:[[:space:]]*([a-zA-Z0-9_]+)/, m)) {
+                print tolower(m[1])
+            }
+        }' "$file" 2>/dev/null | sort | uniq
 }
 
 # Build entity->file map and find dependencies
@@ -170,11 +173,13 @@ echo -e "  ${GREEN}OK!${NC}"
 # =====================================================================
 # Schritt 3: Alle tb_*.vhd Dateien suchen
 # =====================================================================
-mapfile -t tbFiles < <(find tb -name "tb_*.vhd" 2>/dev/null | sort)
-
-if [ ${#tbFiles[@]} -eq 0 ]; then
-    mapfile -t tbFiles < <(find . -maxdepth 1 -name "tb_*.vhd" | sort)
-fi
+mapfile -t tbFiles < <(
+    {
+        find src -type f -name "tb_*.vhd" 2>/dev/null
+        find tb -type f -name "tb_*.vhd" 2>/dev/null
+        find . -maxdepth 1 -type f -name "tb_*.vhd" 2>/dev/null
+    } | sort -u
+)
 
 if [ ${#tbFiles[@]} -eq 0 ]; then
     echo -e "${RED}FEHLER: Keine Testbench-Dateien (tb_*.vhd) gefunden!${NC}"
