@@ -208,9 +208,7 @@ BEGIN
     ---------------------------------------------------------------------------
     u_xbar : ENTITY work.crossbar_switch
         PORT MAP(
-            clk => clk,
-            reset => reset,
-
+            
             -- MUX 0: Bekommt die 4 FIFO-Datenausgaenge als Eingang
             -- Diese werden muliplexed, je nachdem welcher RR-Kanal aktiv ist
             data_m0_i0 => rd_data_0_s,

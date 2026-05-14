@@ -525,9 +525,7 @@ BEGIN
     ---------------------------------------------------------------------------
     u_xbar : ENTITY work.crossbar_switch
         PORT MAP(
-            clk => clk,
-            reset => reset,
-
+        
             -- Eingangsdaten fuer Ausgangsport 0 (alle 4 FIFOs von Queue 0)
             data_m0_i0 => rd_data_o0_0, -- Queue 0, FIFO von Eingang 0
             data_m0_i1 => rd_data_o0_1, -- Queue 0, FIFO von Eingang 1
