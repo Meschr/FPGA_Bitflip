@@ -30,10 +30,6 @@ USE ieee.std_logic_1164.ALL;
 
 ENTITY crossbar_switch IS
     PORT (
-        clk : IN STD_LOGIC; -- Systemtakt / System clock
-        reset : IN STD_LOGIC; -- Synchroner Reset (aktiv high) [derzeit ungenutzt]
-        -- Synchronous reset (active high) [currently unused]
-
         -- -----------------------------------------------------------------
         -- MUX 0 Input-Ports (VOQ-Spalte fuer Zielport 0)
         -- Alle 4 moeglichen Quellen fuer Ausgangkanal 0
