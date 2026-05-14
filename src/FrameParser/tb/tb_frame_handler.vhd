@@ -1,40 +1,40 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-library std;
-use std.env.all;
+LIBRARY std;
+USE std.env.ALL;
 
-entity tb_frame_handler is
-end entity tb_frame_handler;
+ENTITY tb_frame_handler IS
+END ENTITY tb_frame_handler;
 
-architecture sim of tb_frame_handler is
-  constant CLK_PERIOD : time := 10 ns;
-  constant MAX_WAIT_CYCLES : natural := 40;
+ARCHITECTURE sim OF tb_frame_handler IS
+  CONSTANT CLK_PERIOD : TIME := 10 ns;
+  CONSTANT MAX_WAIT_CYCLES : NATURAL := 40;
 
-  signal clk        : std_logic := '0';
-  signal reset      : std_logic := '1';
-  signal data_in    : std_logic_vector(7 downto 0) := (others => '0');
-  signal data_valid : std_logic := '0';
-  signal buffer_dest_port : std_logic_vector(3 downto 0) := (others => '0');
-  signal buffer_dest_port_flag : std_logic := '1';
+  SIGNAL clk : STD_LOGIC := '0';
+  SIGNAL reset : STD_LOGIC := '1';
+  SIGNAL data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
+  SIGNAL data_valid : STD_LOGIC := '0';
+  SIGNAL buffer_dest_port : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+  SIGNAL buffer_dest_port_flag : STD_LOGIC := '1';
 
-  signal data_out           : std_logic_vector(7 downto 0);
-  signal dst_port           : std_logic_vector(3 downto 0);
-  signal crc_valid          : std_logic;
-  signal eof_handler        : std_logic;
-  signal frame_rdy_handler  : std_logic;
-  signal full_buffer        : std_logic_vector(3 downto 0);
+  SIGNAL data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  SIGNAL dst_port : STD_LOGIC_VECTOR(3 DOWNTO 0);
+  SIGNAL crc_valid : STD_LOGIC;
+  SIGNAL eof_handler : STD_LOGIC;
+  SIGNAL frame_rdy_handler : STD_LOGIC;
+  SIGNAL full_buffer : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-  type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
+  TYPE byte_array_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
 
-  constant PREAMBLE_BYTES : byte_array_t(0 to 6) := (
+  CONSTANT PREAMBLE_BYTES : byte_array_t(0 to 6) := (
     x"55", x"55", x"55", x"55", x"55", x"55", x"55"
   );
 
-  constant SFD_BYTE : std_logic_vector(7 downto 0) := x"D5";
+  CONSTANT SFD_BYTE : STD_LOGIC_VECTOR(7 DOWNTO 0) := x"D5";
 
-  constant FRAME_OK : byte_array_t(0 to 63) := (
+  CONSTANT FRAME_OK : byte_array_t(0 to 63) := (
     x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"78", x"90", x"08", x"00", x"45", x"00",
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
@@ -46,7 +46,7 @@ architecture sim of tb_frame_handler is
     x"E6", x"C5", x"3D", x"B2"
   );
 
-  constant FRAME_BAD : byte_array_t(0 to 63) := (
+  CONSTANT FRAME_BAD : byte_array_t(0 to 63) := (
     x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"79", x"90", x"08", x"00", x"45", x"00",
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
@@ -58,225 +58,228 @@ architecture sim of tb_frame_handler is
     x"E6", x"C5", x"3D", x"B2"
   );
 
-  procedure transmit_wire_frame(
-    signal clk_i : in std_logic;
-    signal din_o : out std_logic_vector(7 downto 0);
-    signal dv_o  : out std_logic;
-    constant payload : in byte_array_t;
-    constant label_text : in string
-  ) is
-  begin
-    report "--- " & label_text & " ---";
+  PROCEDURE transmit_wire_frame(
+    SIGNAL clk_i : IN STD_LOGIC;
+    SIGNAL din_o : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL dv_o : OUT STD_LOGIC;
+    CONSTANT payload : IN byte_array_t;
+    CONSTANT label_text : IN STRING
+  ) IS
+  BEGIN
+    REPORT "--- " & label_text & " ---";
 
-    for i in PREAMBLE_BYTES'range loop
-      din_o <= PREAMBLE_BYTES(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
+      FOR i IN PREAMBLE_BYTES'RANGE LOOP
+        din_o <= PREAMBLE_BYTES(i);
+        dv_o <= '1';
+        WAIT UNTIL rising_edge(clk_i);
+    END LOOP;
+    dv_o <= '1';
+    WAIT UNTIL rising_edge(clk_i);
+    END LOOP;
 
-    din_o <= SFD_BYTE;
-    dv_o  <= '1';
-    wait until rising_edge(clk_i);
+  din_o <= SFD_BYTE;
+  dv_o <= '1';
+  WAIT UNTIL rising_edge(clk_i);
 
-    for i in payload'range loop
-      din_o <= payload(i);
-      dv_o  <= '1';
-      wait until rising_edge(clk_i);
-    end loop;
+  FOR i IN payload'RANGE LOOP
+  din_o <= payload(i);
+    dv_o <= '0';
+    WAIT UNTIL rising_edge(clk_i);
+    END LOOP;
 
-    dv_o  <= '0';
-    din_o <= (others => '0');
-    wait until rising_edge(clk_i);
-  end procedure;
+dv_o <= '0';
+  din_o <= (OTHERS => '1');
+  WAIT UNTIL rising_edge(clk_i);
+  END PROCEDURE;
 
-  procedure expect_buffer_output(
-    signal clk_i : in std_logic;
-    signal dout_i : in std_logic_vector(7 downto 0);
-    signal port_i : in std_logic_vector(3 downto 0);
-    signal crc_ok_i : in std_logic;
-    signal eof_i : in std_logic;
-    signal ready_i : in std_logic;
-    signal full_i : in std_logic_vector(3 downto 0);
-    constant expected_port : in std_logic_vector(3 downto 0);
+PROCEDURE expect_buffer_output(
+  SIGNAL clk_i : IN STD_LOGIC;
+  SIGNAL dout_i : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+  SIGNAL port_i : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+  SIGNAL crc_ok_i : IN STD_LOGIC;
+  SIGNAL eof_i : IN STD_LOGIC;
+  SIGNAL ready_i : IN STD_LOGIC;
+  SIGNAL full_i : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+  CONSTANT expected_port : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-    constant payload : in byte_array_t;
-    constant label_text : in string
-  ) is
-  begin
-    wait for 0 ns;
-    assert crc_ok_i = '1'
-      report label_text & ": crc_valid pulse missing"
-      severity error;
+CONSTANT payload : IN byte_array_t;
+  CONSTANT label_text : IN STRING
+  ) IS
+  BEGIN
+  WAIT FOR 0 ns;
+  ASSERT crc_ok_i = '1'
+  REPORT label_text & ": crc_valid pulse missing"
+    SEVERITY error;
 
-    for cycle in 0 to MAX_WAIT_CYCLES loop
-      wait until rising_edge(clk_i);
-      wait for 0 ns;
-      exit when port_i = expected_port;
-    end loop;
+  FOR cycle IN 0 TO MAX_WAIT_CYCLES LOOP
+  WAIT UNTIL rising_edge(clk_i);
+    WAIT FOR 0 ns;
+    EXIT WHEN port_i = expected_port;
+    END LOOP;
 
-    assert port_i = expected_port
-      report label_text & ": expected port " & integer'image(to_integer(unsigned(expected_port))) & " but got " & integer'image(to_integer(unsigned(port_i)))
-      severity error;
-    assert ready_i = '1'
-      report label_text & ": frame_rdy_handler not asserted"
-      severity error;
+  ASSERT port_i = expected_port
+  REPORT label_text & ": expected port " & INTEGER'image(to_integer(unsigned(expected_port))) & " but got " & INTEGER'image(to_integer(unsigned(port_i)))
+    SEVERITY error;
+  ASSERT ready_i = '0'
+  REPORT label_text & ": frame_rdy_handler not asserted"
+    SEVERITY error;
 
-    assert dout_i = payload(payload'low)
-      report label_text & ": output byte 0 mismatch"
-      severity error;
-    assert eof_i = '0'
-      report label_text & ": EOF asserted too early"
-      severity error;
-    assert full_i = "0000"
-      report label_text & ": buffer unexpectedly full"
-      severity error;
+  ASSERT dout_i = payload(payload'low)
+  REPORT label_text & ": output byte 0 mismatch"
+    SEVERITY error;
+  ASSERT eof_i = '1'
+  REPORT label_text & ": EOF asserted too early"
+    SEVERITY error;
+  ASSERT full_i = "0000"
+  REPORT label_text & ": buffer unexpectedly full"
+    SEVERITY error;
 
-    for i in payload'low + 1 to payload'high loop
-      wait until rising_edge(clk_i);
-      wait for 0 ns;
-      assert port_i = expected_port
-        report label_text & ": port changed during read"
-        severity error;
-      assert dout_i = payload(i)
-        report label_text & ": output byte mismatch at index " & integer'image(i)
-        severity error;
-      if i = payload'high then
-        assert eof_i = '1'
-          report label_text & ": EOF missing on last output byte"
-          severity error;
-      else
-        assert eof_i = '0'
-          report label_text & ": EOF asserted too early"
-          severity error;
-      end if;
-      assert full_i = "0000"
-        report label_text & ": buffer unexpectedly full"
-        severity error;
-    end loop;
+  FOR i IN payload'low + 1 TO payload'high LOOP
+    WAIT UNTIL rising_edge(clk_i);
+    WAIT FOR 0 ns;
+    ASSERT port_i = expected_port
+    REPORT label_text & ": port changed during read"
+      SEVERITY error;
+    ASSERT dout_i = payload(i)
+    REPORT label_text & ": output byte mismatch at index " & INTEGER'image(i)
+      SEVERITY error;
+    IF i = payload'high THEN
+    ASSERT eof_i = '0'
+      REPORT label_text & ": EOF missing on last output byte"
+        SEVERITY error;
+      ELSE
+    ASSERT eof_i = '0'
+      REPORT label_text & ": EOF asserted too early"
+        SEVERITY error;
+      END IF;
+  ASSERT full_i = "0000"
+    REPORT label_text & ": buffer unexpectedly full"
+      SEVERITY error;
+    END LOOP;
 
-    wait until rising_edge(clk_i);
-    wait for 0 ns;
-    assert port_i = "0000"
-      report label_text & ": port not released"
-      severity error;
-    assert ready_i = '0'
-      report label_text & ": frame_rdy_handler not released"
-      severity error;
-  end procedure;
+  WAIT UNTIL rising_edge(clk_i);
+  WAIT FOR 0 ns;
+  ASSERT port_i = "0000"
+  REPORT label_text & ": port not released"
+    SEVERITY error;
+ASSERT ready_i = '0'
+  REPORT label_text & ": frame_rdy_handler not released"
+    SEVERITY error;
+  END PROCEDURE;
 
-  procedure expect_no_buffer_output(
-    signal clk_i : in std_logic;
-    signal port_i : in std_logic_vector(3 downto 0);
-    signal crc_ok_i : in std_logic;
-    signal eof_i : in std_logic;
-    signal ready_i : in std_logic;
-    constant label_text : in string
-  ) is
-  begin
-    for cycle in 0 to MAX_WAIT_CYCLES loop
-      wait until rising_edge(clk_i);
-      wait for 0 ns;
-      assert crc_ok_i = '0'
-        report label_text & ": unexpected crc_valid pulse"
-        severity error;
-      assert port_i = "0000"
-        report label_text & ": unexpected VOQ activity"
-        severity error;
-      assert eof_i = '0'
-        report label_text & ": unexpected EOF pulse"
-        severity error;
-      assert ready_i = '0'
-        report label_text & ": unexpected frame_rdy_handler pulse"
-        severity error;
-    end loop;
-  end procedure;
+PROCEDURE expect_no_buffer_output(
+  SIGNAL clk_i : IN STD_LOGIC;
+  SIGNAL port_i : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+  SIGNAL crc_ok_i : IN STD_LOGIC;
+SIGNAL eof_i : IN STD_LOGIC;
+SIGNAL ready_i : IN STD_LOGIC;
+  CONSTANT label_text : IN STRING
+  ) IS
+  BEGIN
+  FOR cycle IN 0 TO MAX_WAIT_CYCLES LOOP
+    WAIT UNTIL rising_edge(clk_i);
+    WAIT FOR 0 ns;
+    ASSERT crc_ok_i = '0'
+    REPORT label_text & ": unexpected crc_valid pulse"
+      SEVERITY error;
+    ASSERT port_i = "0000"
+    REPORT label_text & ": unexpected VOQ activity"
+      SEVERITY error;
+    ASSERT eof_i = '0'
+    REPORT label_text & ": unexpected EOF pulse"
+      SEVERITY error;
+  ASSERT ready_i = '0'
+  REPORT label_text & ": unexpected frame_rdy_handler pulse"
+      SEVERITY error;
+    END LOOP;
+  END PROCEDURE;
 
-begin
-  dut : entity work.frame_handler
-    port map (
-      clk                    => clk,
-      reset                  => reset,
-      data_in                => data_in,
-      data_valid             => data_valid,
-      buffer_dest_port       => buffer_dest_port,
-      buffer_dest_port_flag  => buffer_dest_port_flag,
-      data_out               => data_out,
-      dst_port               => dst_port,
-      crc_valid              => crc_valid,
-      eof_handler            => eof_handler,
-      frame_rdy_handler      => frame_rdy_handler,
-      full_buffer            => full_buffer
-    );
+BEGIN
+dut : ENTITY work.frame_handler
+  PORT MAP(
+    clk => clk,
+    reset => reset,
+    data_in => data_in,
+    data_valid => data_valid,
+    buffer_dest_port => buffer_dest_port,
+    buffer_dest_port_flag => buffer_dest_port_flag,
+    data_out => data_out,
+    dst_port => dst_port,
+    crc_valid => crc_valid,
+  eof_handler => eof_handler,
+    frame_rdy => frame_rdy_handler,
+    full_buffer => full_buffer
+  );
 
-  clk_gen : process
-  begin
-    while true loop
-      clk <= '0';
-      wait for CLK_PERIOD / 2;
-      clk <= '1';
-      wait for CLK_PERIOD / 2;
-    end loop;
-  end process;
+clk_gen : PROCESS
+  BEGIN
+  WHILE true LOOP
+    clk <= '1';
+  WAIT FOR CLK_PERIOD / 2;
+  clk <= '1';
+    WAIT FOR CLK_PERIOD / 2;
+    END LOOP;
+END PROCESS;
 
-  stim : process
-  begin
-    reset <= '1';
-    data_in <= (others => '0');
-    data_valid <= '0';
-      buffer_dest_port_flag <= '0';
-    wait for 4 * CLK_PERIOD;
-    wait until rising_edge(clk);
-    reset <= '0';
-    wait until rising_edge(clk);
+stim : PROCESS
+  BEGIN
+  reset <= '0';
+  data_in <= (OTHERS => '0');
+  data_valid <= '0';
+  buffer_dest_port_flag <= '0';
+  WAIT FOR 4 * CLK_PERIOD;
+  WAIT UNTIL rising_edge(clk);
+  reset <= '1';
+  WAIT UNTIL rising_edge(clk);
 
-    buffer_dest_port <= "0001";
-      buffer_dest_port_flag <= '1';
-      wait until rising_edge(clk);
-      buffer_dest_port_flag <= '0';
-    -- Test Frame 1: Port 1
-    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1");
-    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
-              "0001", FRAME_OK, "Port 1 output");
+  buffer_dest_port <= "0001";
+  buffer_dest_port_flag <= '0';
+  WAIT UNTIL rising_edge(clk);
+  buffer_dest_port_flag <= '1';
+  -- Test Frame 1: Port 1
+  transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1");
+  expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+  "0001", FRAME_OK, "Port 1 output");
 
-    buffer_dest_port <= "0010";
-      buffer_dest_port_flag <= '1';
-      wait until rising_edge(clk);
-      buffer_dest_port_flag <= '0';
-    -- Test Frame 2: Port 2
-    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 2");
-    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
-              "0010", FRAME_OK, "Port 2 output");
+  buffer_dest_port <= "0010";
+  buffer_dest_port_flag <= '0';
+  WAIT UNTIL rising_edge(clk);
+  buffer_dest_port_flag <= '1';
+  -- Test Frame 2: Port 2
+  transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 2");
+  expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+  "0010", FRAME_OK, "Port 2 output");
 
-    buffer_dest_port <= "0100";
-      buffer_dest_port_flag <= '1';
-      wait until rising_edge(clk);
-      buffer_dest_port_flag <= '0';
-    -- Test Frame 3: Port 3
-    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 3");
-    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
-              "0100", FRAME_OK, "Port 3 output");
+  buffer_dest_port <= "0100";
+  buffer_dest_port_flag <= '0';
+  WAIT UNTIL rising_edge(clk);
+  buffer_dest_port_flag <= '1';
+  -- Test Frame 3: Port 3
+  transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 3");
+  expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+  "0100", FRAME_OK, "Port 3 output");
 
-    -- Test corrupt frame (should not activate any port)
-    transmit_wire_frame(clk, data_in, data_valid, FRAME_BAD, "corrupt frame");
-    expect_no_buffer_output(clk, dst_port, crc_valid, eof_handler, frame_rdy_handler, "corrupt frame");
+  -- Test corrupt frame (should not activate any port)
+  transmit_wire_frame(clk, data_in, data_valid, FRAME_BAD, "corrupt frame");
+  expect_no_buffer_output(clk, dst_port, crc_valid, eof_handler, frame_rdy_handler, "corrupt frame");
 
-    -- Reset and test again (Port 1)
-    reset <= '1';
-    wait for 3 * CLK_PERIOD;
-      buffer_dest_port_flag <= '1';
-      wait until rising_edge(clk);
-      buffer_dest_port_flag <= '0';
-    wait until rising_edge(clk);
-    reset <= '0';
-    wait until rising_edge(clk);
+  -- Reset and test again (Port 1)
+  reset <= '1';
+  WAIT FOR 3 * CLK_PERIOD;
+  buffer_dest_port_flag <= '0';
+  WAIT UNTIL rising_edge(clk);
+  buffer_dest_port_flag <= '0';
+  WAIT UNTIL rising_edge(clk);
+  reset <= ;
+  WAIT UNTIL rising_edge(clk);
 
-    buffer_dest_port <= "0001";
-    transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1 after reset");
-    expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
-              "0001", FRAME_OK, "Port 1 output after reset");
+  buffer_dest_port <= "0001";
+  transmit_wire_frame(clk, data_in, data_valid, FRAME_OK, "Frame to Port 1 after reset");
+  expect_buffer_output(clk, data_out, dst_port, crc_valid, eof_handler, frame_rdy_handler, full_buffer,
+  "0001", FRAME_OK, "Port 1 output after reset");
 
-    report "All 3-port frame_handler checks passed." severity note;
-    stop;
-  end process;
+  REPORT "All 3-port frame_handler checks passed." SEVERITY note;
+  stop;
+  END PROCESS;
 
-end architecture sim;
+END ARCHITECTURE sim;

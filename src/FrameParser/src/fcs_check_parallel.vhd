@@ -1,137 +1,136 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-entity fcs_check_parallel is
-  port (
+ENTITY fcs_check_parallel IS
+  PORT (
     -- inputs
-    clk            : in  std_logic;
-    reset          : in  std_logic; -- async
-    start_of_frame : in  std_logic; -- arrival of first byte
-    end_of_frame   : in  std_logic; -- arrival of last byte
-    data_in        : in  std_logic_vector(7 downto 0);
+    clk : IN STD_LOGIC;
+    reset : IN STD_LOGIC; -- async
+    start_of_frame : IN STD_LOGIC; -- arrival of first byte
+    end_of_frame : IN STD_LOGIC; -- arrival of last byte
+    data_in : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
 
     -- outputs
-    fcs_error      : out std_logic;
-    fcs_ok         : out std_logic;
-    data_out       : out std_logic_vector(7 downto 0);
-    wr_en          : out std_logic;
-    eof_out        : out std_logic   -- synchronized EOF: high when end_of_frame aligns with data_out
+    fcs_error : OUT STD_LOGIC;
+    fcs_ok : OUT STD_LOGIC;
+    data_out : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+    wr_en : OUT STD_LOGIC;
+    eof_out : OUT STD_LOGIC -- synchronized EOF: high when end_of_frame aligns with data_out
   );
-end fcs_check_parallel;
+END fcs_check_parallel;
 
-architecture rtl of fcs_check_parallel is
+ARCHITECTURE rtl OF fcs_check_parallel IS
 
-  constant POLY : std_logic_vector(31 downto 0) := x"04C11DB7";
+  CONSTANT POLY : STD_LOGIC_VECTOR(31 DOWNTO 0) := x"04C11DB7";
 
-  signal bit_valid      :  std_logic;
+  SIGNAL bit_valid : STD_LOGIC;
 
-  signal crc_reg   : std_logic_vector(31 downto 0) := (others => '0');
-  signal crc_next  : std_logic_vector(31 downto 0);
-  signal checking  : std_logic := '0';
-  signal head_cnt  : unsigned(5 downto 0) := (others => '0');
-  
+  SIGNAL crc_reg : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
+  SIGNAL crc_next : STD_LOGIC_VECTOR(31 DOWNTO 0);
+  SIGNAL checking : STD_LOGIC := '0';
+  SIGNAL head_cnt : unsigned(5 DOWNTO 0) := (OTHERS => '0');
+BEGIN
 
-begin
+  bit_valid <= start_of_frame OR checking;
 
-  bit_valid <= start_of_frame or checking;
+  ------------------------------------------------------------------
+  -- Combinational CRC next-state (8 bits per cycle, MSB-first)
+  ------------------------------------------------------------------
+  crc_comb : PROCESS (crc_reg, data_in, head_cnt, end_of_frame, bit_valid)
+    VARIABLE c : STD_LOGIC_VECTOR(31 DOWNTO 0);
+    VARIABLE feedback : STD_LOGIC;
+    VARIABLE din_eff : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  BEGIN
 
-------------------------------------------------------------------
--- Combinational CRC next-state (8 bits per cycle, MSB-first)
-------------------------------------------------------------------
-crc_comb : process(crc_reg, data_in, head_cnt, end_of_frame, bit_valid)
-  variable c        : std_logic_vector(31 downto 0);
-  variable feedback : std_logic;
-  variable din_eff  : std_logic_vector(7 downto 0);
-begin
-	
-	if bit_valid = '1' then
-	  -- keep your existing inversion policy
-	  if (head_cnt < 4) then
-		 din_eff := not data_in;
-	  else
-		 din_eff := data_in;
-	  end if;
-	
-	  -- start from current/base CRC value
-	  c := crc_reg;
-	
-	  -- apply 8 serial bit-steps in one combinational block (MSB-first)
-	  for i in 7 downto 0 loop
-		 feedback := c(31) xor din_eff(i);
-		 c        := c(30 downto 0) & '0';
-		 if feedback = '1' then
-			c := c xor POLY;
-		 end if;
-	  end loop;
-	else  --
-	 c := (others => '0');
-	end if ;
-  -- output of this combinational logic
-  crc_next <= c;
-end process;
+    IF bit_valid = '1' THEN
+      -- keep your existing inversion policy
+      IF (head_cnt < 4) THEN
+        din_eff := NOT data_in;
+      ELSE
+        din_eff := data_in;
+      END IF;
+
+      -- start from current/base CRC value
+      c := crc_reg;
+
+      -- apply 8 serial bit-steps in one combinational block (MSB-first)
+      FOR i IN 7 DOWNTO 0 LOOP
+        feedback := c(31) XOR din_eff(i);
+        c := c(30 DOWNTO 0) & '0';
+        IF feedback = '1' THEN
+          c := c XOR POLY;
+        END IF;
+      END LOOP;
+    ELSE --
+      c := (OTHERS => '0');
+    END IF;
+    -- output of this combinational logic
+    crc_next <= c;
+  END PROCESS;
 
   ------------------------------------------------------------------
   -- Sequential control + registers
   ------------------------------------------------------------------
-  seq : process(clk, reset)
-  begin
-    if reset = '1' then
-      crc_reg   <= (others => '0');
-      checking  <= '0';
+  seq : PROCESS (clk, reset)
+  BEGIN
+    IF reset = '1' THEN
+      crc_reg <= (OTHERS => '0');
+      checking <= '0';
       fcs_error <= '0';
-      fcs_ok    <= '0';
-      head_cnt  <= (others => '0');
+      fcs_ok <= '0';
+      head_cnt <= (OTHERS => '0');
 
-    elsif rising_edge(clk) then
+    ELSIF rising_edge(clk) THEN
 
       fcs_error <= '0'; -- default
-      fcs_ok    <= '0'; -- default
-      
+      fcs_ok <= '0'; -- default
+
       -- Start-of-frame sets control state, but does NOT block processing the bit
-      if start_of_frame = '1' then
-        checking  <= '1';
+      IF start_of_frame = '1' THEN
+        checking <= '1';
         fcs_error <= '0';
-        fcs_ok    <= '0';
-        head_cnt  <= (others => '0');
-      end if;
+        fcs_ok <= '0';
+        head_cnt <= (OTHERS => '0');
+      END IF;
 
       -- Process bytes while stream is active.
-      if bit_valid = '1' then
+      IF bit_valid = '1' THEN
         -- end_of_frame marks data_valid falling edge from parser,
         -- so crc_reg already contains the CRC after the last valid byte.
 
-        wr_en <= '1' when (end_of_frame = '0') else '0'; -- valid data output until end_of_frame
+        wr_en <= '1' WHEN (end_of_frame = '0') ELSE
+          '0'; -- valid data output until end_of_frame
         data_out <= data_in; -- passthrough of input data
 
-        if end_of_frame = '1' then
-          if crc_reg = x"C704DD7B" then
+        IF end_of_frame = '1' THEN
+          IF crc_reg = x"C704DD7B" THEN
             fcs_error <= '0';
             fcs_ok <= '1';
-          else
+          ELSE
             fcs_error <= '1';
             fcs_ok <= '0';
-          end if;
+          END IF;
 
           checking <= '0';
-          head_cnt <= (others => '0');
-          crc_reg  <= (others => '0');
-        else
+          head_cnt <= (OTHERS => '0');
+          crc_reg <= (OTHERS => '0');
+        ELSE
           crc_reg <= crc_next;
 
           -- count first 32 bits
-          if head_cnt < 4 then
+          IF head_cnt < 4 THEN
             head_cnt <= head_cnt + 1;
-          end if;
-        end if;
-      else
+          END IF;
+        END IF;
+      ELSE
         wr_en <= '0';
-      end if;
+      END IF;
 
-    end if;
-  end process;
+    END IF;
+  END PROCESS;
 
   -- EOF output synchronized with data_out
-  eof_out <= end_of_frame and bit_valid;
+  eof_out <= end_of_frame AND bit_valid;
 
-end rtl;
+END rtl;

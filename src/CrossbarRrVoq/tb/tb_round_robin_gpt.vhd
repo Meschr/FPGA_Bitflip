@@ -39,144 +39,144 @@
 --        | fuer alle One-Hot-Ausgaben.
 -- =============================================================================
 
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-entity tb_round_robin_gpt is
-end entity;
+ENTITY tb_round_robin_gpt IS
+END ENTITY;
 
-architecture sim of tb_round_robin_gpt is
+ARCHITECTURE sim OF tb_round_robin_gpt IS
 
-    signal clk       : std_logic := '0';
-    signal reset     : std_logic := '0';
-    signal frame_rdy : std_logic_vector(3 downto 0) := (others => '0');
-    signal eof       : std_logic := '0';
+    SIGNAL clk : STD_LOGIC := '0';
+    SIGNAL reset : STD_LOGIC := '0';
+    SIGNAL frame_rdy : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL eof : STD_LOGIC := '0';
 
-    signal sel       : std_logic_vector(1 downto 0);
-    signal grant     : std_logic_vector(3 downto 0);
-    signal active    : std_logic;
+    SIGNAL sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL grant : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL active : STD_LOGIC;
 
-    constant CLK_PERIOD : time := 10 ns;
+    CONSTANT CLK_PERIOD : TIME := 10 ns;
 
-    function slv_to_string(slv : std_logic_vector) return string is
-        variable result : string(1 to slv'length);
-        variable idx    : integer := 1;
-    begin
-        for i in slv'reverse_range loop
-            case slv(i) is
-                when '0'    => result(idx) := '0';
-                when '1'    => result(idx) := '1';
-                when 'U'    => result(idx) := 'U';
-                when 'X'    => result(idx) := 'X';
-                when 'Z'    => result(idx) := 'Z';
-                when 'W'    => result(idx) := 'W';
-                when 'L'    => result(idx) := 'L';
-                when 'H'    => result(idx) := 'H';
-                when '-'    => result(idx) := '-';
-                when others => result(idx) := '?';
-            end case;
+    FUNCTION slv_to_string(slv : STD_LOGIC_VECTOR) RETURN STRING IS
+        VARIABLE result : STRING(1 TO slv'length);
+        VARIABLE idx : INTEGER := 1;
+    BEGIN
+        FOR i IN slv'reverse_range LOOP
+            CASE slv(i) IS
+                WHEN '0' => result(idx) := '0';
+                WHEN '1' => result(idx) := '1';
+                WHEN 'U' => result(idx) := 'U';
+                WHEN 'X' => result(idx) := 'X';
+                WHEN 'Z' => result(idx) := 'Z';
+                WHEN 'W' => result(idx) := 'W';
+                WHEN 'L' => result(idx) := 'L';
+                WHEN 'H' => result(idx) := 'H';
+                WHEN '-' => result(idx) := '-';
+                WHEN OTHERS => result(idx) := '?';
+            END CASE;
             idx := idx + 1;
-        end loop;
-        return result;
-    end function;
+        END LOOP;
+        RETURN result;
+    END FUNCTION;
 
-begin
+BEGIN
 
-    dut : entity work.round_robin
-        port map (
-            clk       => clk,
-            reset     => reset,
+    dut : ENTITY work.round_robin
+        PORT MAP(
+            clk => clk,
+            reset => reset,
             frame_rdy => frame_rdy,
-            eof       => eof,
-            sel       => sel,
-            grant     => grant,
-            active    => active
+            eof => eof,
+            sel => sel,
+            grant => grant,
+            active => active
         );
 
-    clk <= not clk after CLK_PERIOD/2;
+    clk <= NOT clk AFTER CLK_PERIOD/2;
 
-    stim_proc : process
+    stim_proc : PROCESS
 
-        procedure check_outputs(
-            constant exp_sel    : std_logic_vector(1 downto 0);
-            constant exp_grant  : std_logic_vector(3 downto 0);
-            constant exp_active : std_logic;
-            constant msg        : string
-        ) is
-        begin
-            assert sel = exp_sel
-                report msg & " | SEL mismatch. Expected="
-                       & slv_to_string(exp_sel)
-                       & " Actual=" & slv_to_string(sel)
-                severity error;
+        PROCEDURE check_outputs(
+            CONSTANT exp_sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
+            CONSTANT exp_grant : STD_LOGIC_VECTOR(3 DOWNTO 0);
+            CONSTANT exp_active : STD_LOGIC;
+            CONSTANT msg : STRING
+        ) IS
+        BEGIN
+            ASSERT sel = exp_sel
+            REPORT msg & " | SEL mismatch. Expected="
+                & slv_to_string(exp_sel)
+                & " Actual=" & slv_to_string(sel)
+                SEVERITY error;
 
-            assert grant = exp_grant
-                report msg & " | GRANT mismatch. Expected="
-                       & slv_to_string(exp_grant)
-                       & " Actual=" & slv_to_string(grant)
-                severity error;
+            ASSERT grant = exp_grant
+            REPORT msg & " | GRANT mismatch. Expected="
+                & slv_to_string(exp_grant)
+                & " Actual=" & slv_to_string(grant)
+                SEVERITY error;
 
-            assert active = exp_active
-                report msg & " | ACTIVE mismatch. Expected="
-                       & std_logic'image(exp_active)
-                       & " Actual=" & std_logic'image(active)
-                severity error;
-        end procedure;
+            ASSERT active = exp_active
+            REPORT msg & " | ACTIVE mismatch. Expected="
+                & STD_LOGIC'image(exp_active)
+                & " Actual=" & STD_LOGIC'image(active)
+                SEVERITY error;
+        END PROCEDURE;
 
-        procedure step_and_check(
-            constant exp_sel    : std_logic_vector(1 downto 0);
-            constant exp_grant  : std_logic_vector(3 downto 0);
-            constant exp_active : std_logic;
-            constant msg        : string
-        ) is
-        begin
-            wait until rising_edge(clk);
-            wait for 0.3 ns;
+        PROCEDURE step_and_check(
+            CONSTANT exp_sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
+            CONSTANT exp_grant : STD_LOGIC_VECTOR(3 DOWNTO 0);
+            CONSTANT exp_active : STD_LOGIC;
+            CONSTANT msg : STRING
+        ) IS
+        BEGIN
+            WAIT UNTIL rising_edge(clk);
+            WAIT FOR 0.3 ns;
             check_outputs(exp_sel, exp_grant, exp_active, msg);
-        end procedure;
+        END PROCEDURE;
 
-        procedure reset_dut is
-        begin
+        PROCEDURE reset_dut IS
+        BEGIN
             frame_rdy <= "0000";
-            eof       <= '0';
-            reset     <= '1';
-            wait until rising_edge(clk);
-            wait for 1 ns;
+            eof <= '0';
+            reset <= '1';
+            WAIT UNTIL rising_edge(clk);
+            WAIT FOR 1 ns;
             check_outputs("00", "0000", '0', "Reset cycle 1");
-            wait until rising_edge(clk);
-            wait for 1 ns;
+            WAIT UNTIL rising_edge(clk);
+            WAIT FOR 1 ns;
             check_outputs("00", "0000", '0', "Reset cycle 2");
             reset <= '0';
-        end procedure;
+        END PROCEDURE;
 
-        procedure release_and_check_idle(
-            constant exp_sel : std_logic_vector(1 downto 0);
-            constant msg     : string
-        ) is
-        begin
+        PROCEDURE release_and_check_idle(
+            CONSTANT exp_sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
+            CONSTANT msg : STRING
+        ) IS
+        BEGIN
             eof <= '1';
             step_and_check(exp_sel, "0000", '0', msg & " | EOF release");
             eof <= '0';
             frame_rdy <= "0000";
             step_and_check(exp_sel, "0000", '0', msg & " | Idle after release");
-        end procedure;
+        END PROCEDURE;
 
-    begin
+    BEGIN
         --------------------------------------------------------------------
         -- TEST 0
         --------------------------------------------------------------------
-        report "TEST 0: reset / idle" severity note;
+        REPORT "TEST 0: reset / idle" SEVERITY note;
         reset_dut;
         step_and_check("00", "0000", '0', "No request pending");
 
         --------------------------------------------------------------------
         -- TEST 1
         --------------------------------------------------------------------
-        report "TEST 1: single request at input 3 (easy to see in waveform)" severity note;
+        REPORT "TEST 1: single request at input 3 (easy to see in waveform)" SEVERITY note;
         reset_dut;
         frame_rdy <= "1000";
-        eof       <= '0';
+        eof <= '0';
         step_and_check("11", "1000", '1', "Acquire input 3");
         step_and_check("11", "1000", '1', "Stay locked on input 3");
         release_and_check_idle("11", "Input 3");
@@ -184,7 +184,7 @@ begin
         --------------------------------------------------------------------
         -- TEST 2
         --------------------------------------------------------------------
-        report "TEST 2: single request at input 0" severity note;
+        REPORT "TEST 2: single request at input 0" SEVERITY note;
         reset_dut;
         frame_rdy <= "0001";
         step_and_check("00", "0001", '1', "Acquire input 0");
@@ -194,7 +194,7 @@ begin
         --------------------------------------------------------------------
         -- TEST 3
         --------------------------------------------------------------------
-        report "TEST 3: locked grant ignores frame_rdy changes until eof" severity note;
+        REPORT "TEST 3: locked grant ignores frame_rdy changes until eof" SEVERITY note;
         reset_dut;
         frame_rdy <= "0010";
         step_and_check("01", "0010", '1', "Acquire input 1");
@@ -207,7 +207,7 @@ begin
         --------------------------------------------------------------------
         -- TEST 4
         --------------------------------------------------------------------
-        report "TEST 4: round-robin fairness sequence starting from reset" severity note;
+        REPORT "TEST 4: round-robin fairness sequence starting from reset" SEVERITY note;
         reset_dut;
 
         -- only input 3 ready -> should eventually pick 3
@@ -233,20 +233,20 @@ begin
         --------------------------------------------------------------------
         -- TEST 5
         --------------------------------------------------------------------
-        report "TEST 5: sparse scan order from reset" severity note;
+        REPORT "TEST 5: sparse scan order from reset" SEVERITY note;
         reset_dut;
-        frame_rdy <= "1001";  -- inputs 3 and 0
+        frame_rdy <= "1001"; -- inputs 3 and 0
         step_and_check("00", "0001", '1', "From rr_ptr=0 should pick input 0 first");
         release_and_check_idle("00", "Sparse test after input 0");
 
-        frame_rdy <= "1001";  -- now rr_ptr should be 1, scan 1->2->3->0, so pick 3
+        frame_rdy <= "1001"; -- now rr_ptr should be 1, scan 1->2->3->0, so pick 3
         step_and_check("11", "1000", '1', "From rr_ptr=1 should pick input 3");
         release_and_check_idle("11", "Sparse test after input 3");
 
         --------------------------------------------------------------------
         -- TEST 6
         --------------------------------------------------------------------
-        report "TEST 6: each port individually from fresh reset" severity note;
+        REPORT "TEST 6: each port individually from fresh reset" SEVERITY note;
 
         reset_dut;
         frame_rdy <= "0010";
@@ -263,8 +263,8 @@ begin
         step_and_check("11", "1000", '1', "Single input 3 again");
         release_and_check_idle("11", "Single input 3 again");
 
-        report "All tests in tb_round_robin_gpt completed successfully." severity note;
-        wait;
-    end process;
+        REPORT "All tests in tb_round_robin_gpt completed successfully." SEVERITY note;
+        WAIT;
+    END PROCESS;
 
-end architecture;
+END ARCHITECTURE;

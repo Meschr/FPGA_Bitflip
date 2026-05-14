@@ -1,58 +1,58 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-entity tb_voq_rr_crossbar_switch_top is
-end entity;
+ENTITY tb_voq_rr_crossbar_switch_top IS
+END ENTITY;
 
-architecture sim of tb_voq_rr_crossbar_switch_top is
+ARCHITECTURE sim OF tb_voq_rr_crossbar_switch_top IS
 
-    constant CLK_PERIOD : time := 10 ns;
+    CONSTANT CLK_PERIOD : TIME := 10 ns;
 
-    signal clk   : std_logic := '0';
-    signal reset : std_logic := '1';
+    SIGNAL clk : STD_LOGIC := '0';
+    SIGNAL reset : STD_LOGIC := '1';
 
     -- Flush je Output-Queue
-    signal flush_out0 : std_logic_vector(3 downto 0) := (others => '0');
-    signal flush_out1 : std_logic_vector(3 downto 0) := (others => '0');
-    signal flush_out2 : std_logic_vector(3 downto 0) := (others => '0');
-    signal flush_out3 : std_logic_vector(3 downto 0) := (others => '0');
+    SIGNAL flush_out0 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL flush_out1 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL flush_out2 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL flush_out3 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
 
     -- Schreibports: 4 Eingange x 4 Ausgaenge
-    signal wr_data_in0_out0, wr_data_in0_out1, wr_data_in0_out2, wr_data_in0_out3 : std_logic_vector(7 downto 0);
-    signal wr_data_in1_out0, wr_data_in1_out1, wr_data_in1_out2, wr_data_in1_out3 : std_logic_vector(7 downto 0);
-    signal wr_data_in2_out0, wr_data_in2_out1, wr_data_in2_out2, wr_data_in2_out3 : std_logic_vector(7 downto 0);
-    signal wr_data_in3_out0, wr_data_in3_out1, wr_data_in3_out2, wr_data_in3_out3 : std_logic_vector(7 downto 0);
+    SIGNAL wr_data_in0_out0, wr_data_in0_out1, wr_data_in0_out2, wr_data_in0_out3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL wr_data_in1_out0, wr_data_in1_out1, wr_data_in1_out2, wr_data_in1_out3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL wr_data_in2_out0, wr_data_in2_out1, wr_data_in2_out2, wr_data_in2_out3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL wr_data_in3_out0, wr_data_in3_out1, wr_data_in3_out2, wr_data_in3_out3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
-    signal wr_en_in0_out0, wr_en_in0_out1, wr_en_in0_out2, wr_en_in0_out3 : std_logic := '0';
-    signal wr_en_in1_out0, wr_en_in1_out1, wr_en_in1_out2, wr_en_in1_out3 : std_logic := '0';
-    signal wr_en_in2_out0, wr_en_in2_out1, wr_en_in2_out2, wr_en_in2_out3 : std_logic := '0';
-    signal wr_en_in3_out0, wr_en_in3_out1, wr_en_in3_out2, wr_en_in3_out3 : std_logic := '0';
+    SIGNAL wr_en_in0_out0, wr_en_in0_out1, wr_en_in0_out2, wr_en_in0_out3 : STD_LOGIC := '0';
+    SIGNAL wr_en_in1_out0, wr_en_in1_out1, wr_en_in1_out2, wr_en_in1_out3 : STD_LOGIC := '0';
+    SIGNAL wr_en_in2_out0, wr_en_in2_out1, wr_en_in2_out2, wr_en_in2_out3 : STD_LOGIC := '0';
+    SIGNAL wr_en_in3_out0, wr_en_in3_out1, wr_en_in3_out2, wr_en_in3_out3 : STD_LOGIC := '0';
 
-    signal wr_eof_in0_out0, wr_eof_in0_out1, wr_eof_in0_out2, wr_eof_in0_out3 : std_logic := '0';
-    signal wr_eof_in1_out0, wr_eof_in1_out1, wr_eof_in1_out2, wr_eof_in1_out3 : std_logic := '0';
-    signal wr_eof_in2_out0, wr_eof_in2_out1, wr_eof_in2_out2, wr_eof_in2_out3 : std_logic := '0';
-    signal wr_eof_in3_out0, wr_eof_in3_out1, wr_eof_in3_out2, wr_eof_in3_out3 : std_logic := '0';
+    SIGNAL wr_eof_in0_out0, wr_eof_in0_out1, wr_eof_in0_out2, wr_eof_in0_out3 : STD_LOGIC := '0';
+    SIGNAL wr_eof_in1_out0, wr_eof_in1_out1, wr_eof_in1_out2, wr_eof_in1_out3 : STD_LOGIC := '0';
+    SIGNAL wr_eof_in2_out0, wr_eof_in2_out1, wr_eof_in2_out2, wr_eof_in2_out3 : STD_LOGIC := '0';
+    SIGNAL wr_eof_in3_out0, wr_eof_in3_out1, wr_eof_in3_out2, wr_eof_in3_out3 : STD_LOGIC := '0';
 
     -- Ausgaenge
-    signal out_data_0  : std_logic_vector(7 downto 0);
-    signal out_data_1  : std_logic_vector(7 downto 0);
-    signal out_data_2  : std_logic_vector(7 downto 0);
-    signal out_data_3  : std_logic_vector(7 downto 0);
+    SIGNAL out_data_0 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL out_data_1 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL out_data_2 : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL out_data_3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
-    signal out_valid_0 : std_logic;
-    signal out_valid_1 : std_logic;
-    signal out_valid_2 : std_logic;
-    signal out_valid_3 : std_logic;
+    SIGNAL out_valid_0 : STD_LOGIC;
+    SIGNAL out_valid_1 : STD_LOGIC;
+    SIGNAL out_valid_2 : STD_LOGIC;
+    SIGNAL out_valid_3 : STD_LOGIC;
 
-begin
+BEGIN
 
     ---------------------------------------------------------------------------
     -- DUT
     ---------------------------------------------------------------------------
-    dut : entity work.voq_rr_crossbar_switch_top
-        port map (
-            clk   => clk,
+    dut : ENTITY work.voq_rr_crossbar_switch_top
+        PORT MAP(
+            clk => clk,
             reset => reset,
 
             flush_out0 => flush_out0,
@@ -61,284 +61,301 @@ begin
             flush_out3 => flush_out3,
 
             wr_data_in0_out0 => wr_data_in0_out0,
-            wr_en_in0_out0   => wr_en_in0_out0,
-            wr_eof_in0_out0  => wr_eof_in0_out0,
+            wr_en_in0_out0 => wr_en_in0_out0,
+            wr_eof_in0_out0 => wr_eof_in0_out0,
 
             wr_data_in0_out1 => wr_data_in0_out1,
-            wr_en_in0_out1   => wr_en_in0_out1,
-            wr_eof_in0_out1  => wr_eof_in0_out1,
+            wr_en_in0_out1 => wr_en_in0_out1,
+            wr_eof_in0_out1 => wr_eof_in0_out1,
 
             wr_data_in0_out2 => wr_data_in0_out2,
-            wr_en_in0_out2   => wr_en_in0_out2,
-            wr_eof_in0_out2  => wr_eof_in0_out2,
+            wr_en_in0_out2 => wr_en_in0_out2,
+            wr_eof_in0_out2 => wr_eof_in0_out2,
 
             wr_data_in0_out3 => wr_data_in0_out3,
-            wr_en_in0_out3   => wr_en_in0_out3,
-            wr_eof_in0_out3  => wr_eof_in0_out3,
+            wr_en_in0_out3 => wr_en_in0_out3,
+            wr_eof_in0_out3 => wr_eof_in0_out3,
 
             wr_data_in1_out0 => wr_data_in1_out0,
-            wr_en_in1_out0   => wr_en_in1_out0,
-            wr_eof_in1_out0  => wr_eof_in1_out0,
+            wr_en_in1_out0 => wr_en_in1_out0,
+            wr_eof_in1_out0 => wr_eof_in1_out0,
 
             wr_data_in1_out1 => wr_data_in1_out1,
-            wr_en_in1_out1   => wr_en_in1_out1,
-            wr_eof_in1_out1  => wr_eof_in1_out1,
+            wr_en_in1_out1 => wr_en_in1_out1,
+            wr_eof_in1_out1 => wr_eof_in1_out1,
 
             wr_data_in1_out2 => wr_data_in1_out2,
-            wr_en_in1_out2   => wr_en_in1_out2,
-            wr_eof_in1_out2  => wr_eof_in1_out2,
+            wr_en_in1_out2 => wr_en_in1_out2,
+            wr_eof_in1_out2 => wr_eof_in1_out2,
 
             wr_data_in1_out3 => wr_data_in1_out3,
-            wr_en_in1_out3   => wr_en_in1_out3,
-            wr_eof_in1_out3  => wr_eof_in1_out3,
+            wr_en_in1_out3 => wr_en_in1_out3,
+            wr_eof_in1_out3 => wr_eof_in1_out3,
 
             wr_data_in2_out0 => wr_data_in2_out0,
-            wr_en_in2_out0   => wr_en_in2_out0,
-            wr_eof_in2_out0  => wr_eof_in2_out0,
+            wr_en_in2_out0 => wr_en_in2_out0,
+            wr_eof_in2_out0 => wr_eof_in2_out0,
 
             wr_data_in2_out1 => wr_data_in2_out1,
-            wr_en_in2_out1   => wr_en_in2_out1,
-            wr_eof_in2_out1  => wr_eof_in2_out1,
+            wr_en_in2_out1 => wr_en_in2_out1,
+            wr_eof_in2_out1 => wr_eof_in2_out1,
 
             wr_data_in2_out2 => wr_data_in2_out2,
-            wr_en_in2_out2   => wr_en_in2_out2,
-            wr_eof_in2_out2  => wr_eof_in2_out2,
+            wr_en_in2_out2 => wr_en_in2_out2,
+            wr_eof_in2_out2 => wr_eof_in2_out2,
 
             wr_data_in2_out3 => wr_data_in2_out3,
-            wr_en_in2_out3   => wr_en_in2_out3,
-            wr_eof_in2_out3  => wr_eof_in2_out3,
+            wr_en_in2_out3 => wr_en_in2_out3,
+            wr_eof_in2_out3 => wr_eof_in2_out3,
 
             wr_data_in3_out0 => wr_data_in3_out0,
-            wr_en_in3_out0   => wr_en_in3_out0,
-            wr_eof_in3_out0  => wr_eof_in3_out0,
+            wr_en_in3_out0 => wr_en_in3_out0,
+            wr_eof_in3_out0 => wr_eof_in3_out0,
 
             wr_data_in3_out1 => wr_data_in3_out1,
-            wr_en_in3_out1   => wr_en_in3_out1,
-            wr_eof_in3_out1  => wr_eof_in3_out1,
+            wr_en_in3_out1 => wr_en_in3_out1,
+            wr_eof_in3_out1 => wr_eof_in3_out1,
 
             wr_data_in3_out2 => wr_data_in3_out2,
-            wr_en_in3_out2   => wr_en_in3_out2,
-            wr_eof_in3_out2  => wr_eof_in3_out2,
+            wr_en_in3_out2 => wr_en_in3_out2,
+            wr_eof_in3_out2 => wr_eof_in3_out2,
 
             wr_data_in3_out3 => wr_data_in3_out3,
-            wr_en_in3_out3   => wr_en_in3_out3,
-            wr_eof_in3_out3  => wr_eof_in3_out3,
+            wr_en_in3_out3 => wr_en_in3_out3,
+            wr_eof_in3_out3 => wr_eof_in3_out3,
 
-            out_data_0  => out_data_0,
-            out_data_1  => out_data_1,
-            out_data_2  => out_data_2,
-            out_data_3  => out_data_3,
+            out_data_0 => out_data_0,
+            out_data_1 => out_data_1,
+            out_data_2 => out_data_2,
+            out_data_3 => out_data_3,
 
             out_valid_0 => out_valid_0,
             out_valid_1 => out_valid_1,
             out_valid_2 => out_valid_2,
             out_valid_3 => out_valid_3,
 
-            rr_sel_0    => open,
-            rr_sel_1    => open,
-            rr_sel_2    => open,
-            rr_sel_3    => open,
+            rr_sel_0 => OPEN,
+            rr_sel_1 => OPEN,
+            rr_sel_2 => OPEN,
+            rr_sel_3 => OPEN,
 
-            rr_grant_0  => open,
-            rr_grant_1  => open,
-            rr_grant_2  => open,
-            rr_grant_3  => open,
+            rr_grant_0 => OPEN,
+            rr_grant_1 => OPEN,
+            rr_grant_2 => OPEN,
+            rr_grant_3 => OPEN,
 
-            rr_active_0 => open,
-            rr_active_1 => open,
-            rr_active_2 => open,
-            rr_active_3 => open,
+            rr_active_0 => OPEN,
+            rr_active_1 => OPEN,
+            rr_active_2 => OPEN,
+            rr_active_3 => OPEN,
 
-            frame_rdy_dbg_0 => open,
-            frame_rdy_dbg_1 => open,
-            frame_rdy_dbg_2 => open,
-            frame_rdy_dbg_3 => open,
+            frame_rdy_dbg_0 => OPEN,
+            frame_rdy_dbg_1 => OPEN,
+            frame_rdy_dbg_2 => OPEN,
+            frame_rdy_dbg_3 => OPEN,
 
-            rd_eof_dbg_0 => open,
-            rd_eof_dbg_1 => open,
-            rd_eof_dbg_2 => open,
-            rd_eof_dbg_3 => open,
+            rd_eof_dbg_0 => OPEN,
+            rd_eof_dbg_1 => OPEN,
+            rd_eof_dbg_2 => OPEN,
+            rd_eof_dbg_3 => OPEN,
 
-            full_dbg_0 => open,
-            full_dbg_1 => open,
-            full_dbg_2 => open,
-            full_dbg_3 => open,
+            full_dbg_0 => OPEN,
+            full_dbg_1 => OPEN,
+            full_dbg_2 => OPEN,
+            full_dbg_3 => OPEN,
 
-            empty_dbg_0 => open,
-            empty_dbg_1 => open,
-            empty_dbg_2 => open,
-            empty_dbg_3 => open
+            empty_dbg_0 => OPEN,
+            empty_dbg_1 => OPEN,
+            empty_dbg_2 => OPEN,
+            empty_dbg_3 => OPEN
         );
 
     ---------------------------------------------------------------------------
     -- Clock
     ---------------------------------------------------------------------------
-    clk <= not clk after CLK_PERIOD / 2;
+    clk <= NOT clk AFTER CLK_PERIOD / 2;
 
     ---------------------------------------------------------------------------
     -- Output Monitor: zeigt ausgehende Daten je Ausgang im Transcript
     ---------------------------------------------------------------------------
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if out_valid_0 = '1' then
-                report "OUT0 data=" & integer'image(to_integer(unsigned(out_data_0))) severity note;
-            end if;
-            if out_valid_1 = '1' then
-                report "OUT1 data=" & integer'image(to_integer(unsigned(out_data_1))) severity note;
-            end if;
-            if out_valid_2 = '1' then
-                report "OUT2 data=" & integer'image(to_integer(unsigned(out_data_2))) severity note;
-            end if;
-            if out_valid_3 = '1' then
-                report "OUT3 data=" & integer'image(to_integer(unsigned(out_data_3))) severity note;
-            end if;
-        end if;
-    end process;
+    PROCESS (clk)
+    BEGIN
+        IF rising_edge(clk) THEN
+            IF out_valid_0 = '1' THEN
+                REPORT "OUT0 data=" & INTEGER'image(to_integer(unsigned(out_data_0))) SEVERITY note;
+            END IF;
+            IF out_valid_1 = '1' THEN
+                REPORT "OUT1 data=" & INTEGER'image(to_integer(unsigned(out_data_1))) SEVERITY note;
+            END IF;
+            IF out_valid_2 = '1' THEN
+                REPORT "OUT2 data=" & INTEGER'image(to_integer(unsigned(out_data_2))) SEVERITY note;
+            END IF;
+            IF out_valid_3 = '1' THEN
+                REPORT "OUT3 data=" & INTEGER'image(to_integer(unsigned(out_data_3))) SEVERITY note;
+            END IF;
+        END IF;
+    END PROCESS;
 
     ---------------------------------------------------------------------------
     -- Stimulus
     ---------------------------------------------------------------------------
-    process
-    begin
+    PROCESS
+    BEGIN
         -- Initialwerte
-        wr_data_in0_out0 <= (others => '0'); wr_data_in0_out1 <= (others => '0');
-        wr_data_in0_out2 <= (others => '0'); wr_data_in0_out3 <= (others => '0');
-        wr_data_in1_out0 <= (others => '0'); wr_data_in1_out1 <= (others => '0');
-        wr_data_in1_out2 <= (others => '0'); wr_data_in1_out3 <= (others => '0');
-        wr_data_in2_out0 <= (others => '0'); wr_data_in2_out1 <= (others => '0');
-        wr_data_in2_out2 <= (others => '0'); wr_data_in2_out3 <= (others => '0');
-        wr_data_in3_out0 <= (others => '0'); wr_data_in3_out1 <= (others => '0');
-        wr_data_in3_out2 <= (others => '0'); wr_data_in3_out3 <= (others => '0');
+        wr_data_in0_out0 <= (OTHERS => '0');
+        wr_data_in0_out1 <= (OTHERS => '0');
+        wr_data_in0_out2 <= (OTHERS => '0');
+        wr_data_in0_out3 <= (OTHERS => '0');
+        wr_data_in1_out0 <= (OTHERS => '0');
+        wr_data_in1_out1 <= (OTHERS => '0');
+        wr_data_in1_out2 <= (OTHERS => '0');
+        wr_data_in1_out3 <= (OTHERS => '0');
+        wr_data_in2_out0 <= (OTHERS => '0');
+        wr_data_in2_out1 <= (OTHERS => '0');
+        wr_data_in2_out2 <= (OTHERS => '0');
+        wr_data_in2_out3 <= (OTHERS => '0');
+        wr_data_in3_out0 <= (OTHERS => '0');
+        wr_data_in3_out1 <= (OTHERS => '0');
+        wr_data_in3_out2 <= (OTHERS => '0');
+        wr_data_in3_out3 <= (OTHERS => '0');
 
         -- Reset
-        wait for 3 * CLK_PERIOD;
+        WAIT FOR 3 * CLK_PERIOD;
         reset <= '0';
-        wait for CLK_PERIOD;
+        WAIT FOR CLK_PERIOD;
 
         -----------------------------------------------------------------------
         -- TEST 1: Output 0 bekommt vier unterschiedliche Streams (alle Inputs)
         -- Datenmuster: 0x10.., 0x20.., 0x30.., 0x40..
         -----------------------------------------------------------------------
-        report "TEST 1: Output 0, alle Inputs" severity note;
-        for i in 0 to 3 loop
-            wait until rising_edge(clk);
+        REPORT "TEST 1: Output 0, alle Inputs" SEVERITY note;
+        FOR i IN 0 TO 3 LOOP
+            WAIT UNTIL rising_edge(clk);
 
             wr_en_in0_out0 <= '1';
-            wr_data_in0_out0 <= std_logic_vector(to_unsigned(16 + i, 8));
+            wr_data_in0_out0 <= STD_LOGIC_VECTOR(to_unsigned(16 + i, 8));
             wr_eof_in0_out0 <= '0';
 
             wr_en_in1_out0 <= '1';
-            wr_data_in1_out0 <= std_logic_vector(to_unsigned(32 + i, 8));
+            wr_data_in1_out0 <= STD_LOGIC_VECTOR(to_unsigned(32 + i, 8));
             wr_eof_in1_out0 <= '0';
 
             wr_en_in2_out0 <= '1';
-            wr_data_in2_out0 <= std_logic_vector(to_unsigned(48 + i, 8));
+            wr_data_in2_out0 <= STD_LOGIC_VECTOR(to_unsigned(48 + i, 8));
             wr_eof_in2_out0 <= '0';
 
             wr_en_in3_out0 <= '1';
-            wr_data_in3_out0 <= std_logic_vector(to_unsigned(64 + i, 8));
+            wr_data_in3_out0 <= STD_LOGIC_VECTOR(to_unsigned(64 + i, 8));
             wr_eof_in3_out0 <= '0';
-        end loop;
+        END LOOP;
 
-        wait until rising_edge(clk);
-        wr_data_in0_out0 <= std_logic_vector(to_unsigned(16 + 4, 8));
-        wr_data_in1_out0 <= std_logic_vector(to_unsigned(32 + 4, 8));
-        wr_data_in2_out0 <= std_logic_vector(to_unsigned(48 + 4, 8));
-        wr_data_in3_out0 <= std_logic_vector(to_unsigned(64 + 4, 8));
-        wr_eof_in0_out0  <= '1';
-        wr_eof_in1_out0  <= '1';
-        wr_eof_in2_out0  <= '1';
-        wr_eof_in3_out0  <= '1';
+        WAIT UNTIL rising_edge(clk);
+        wr_data_in0_out0 <= STD_LOGIC_VECTOR(to_unsigned(16 + 4, 8));
+        wr_data_in1_out0 <= STD_LOGIC_VECTOR(to_unsigned(32 + 4, 8));
+        wr_data_in2_out0 <= STD_LOGIC_VECTOR(to_unsigned(48 + 4, 8));
+        wr_data_in3_out0 <= STD_LOGIC_VECTOR(to_unsigned(64 + 4, 8));
+        wr_eof_in0_out0 <= '1';
+        wr_eof_in1_out0 <= '1';
+        wr_eof_in2_out0 <= '1';
+        wr_eof_in3_out0 <= '1';
 
-        wait until rising_edge(clk);
-        wr_en_in0_out0 <= '0'; wr_eof_in0_out0 <= '0';
-        wr_en_in1_out0 <= '0'; wr_eof_in1_out0 <= '0';
-        wr_en_in2_out0 <= '0'; wr_eof_in2_out0 <= '0';
-        wr_en_in3_out0 <= '0'; wr_eof_in3_out0 <= '0';
+        WAIT UNTIL rising_edge(clk);
+        wr_en_in0_out0 <= '0';
+        wr_eof_in0_out0 <= '0';
+        wr_en_in1_out0 <= '0';
+        wr_eof_in1_out0 <= '0';
+        wr_en_in2_out0 <= '0';
+        wr_eof_in2_out0 <= '0';
+        wr_en_in3_out0 <= '0';
+        wr_eof_in3_out0 <= '0';
 
-        wait for 30 * CLK_PERIOD;
+        WAIT FOR 30 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
         -- TEST 2: Output 1 bekommt zwei Streams (Input 0 und 2)
         -- Datenmuster: 0x50.. und 0x70..
         -----------------------------------------------------------------------
-        report "TEST 2: Output 1, Inputs 0 und 2" severity note;
-        for i in 0 to 2 loop
-            wait until rising_edge(clk);
+        REPORT "TEST 2: Output 1, Inputs 0 und 2" SEVERITY note;
+        FOR i IN 0 TO 2 LOOP
+            WAIT UNTIL rising_edge(clk);
 
             wr_en_in0_out1 <= '1';
-            wr_data_in0_out1 <= std_logic_vector(to_unsigned(80 + i, 8));
+            wr_data_in0_out1 <= STD_LOGIC_VECTOR(to_unsigned(80 + i, 8));
             wr_eof_in0_out1 <= '0';
 
             wr_en_in2_out1 <= '1';
-            wr_data_in2_out1 <= std_logic_vector(to_unsigned(112 + i, 8));
+            wr_data_in2_out1 <= STD_LOGIC_VECTOR(to_unsigned(112 + i, 8));
             wr_eof_in2_out1 <= '0';
-        end loop;
+        END LOOP;
 
-        wait until rising_edge(clk);
-        wr_data_in0_out1 <= std_logic_vector(to_unsigned(80 + 3, 8));
-        wr_data_in2_out1 <= std_logic_vector(to_unsigned(112 + 3, 8));
-        wr_eof_in0_out1  <= '1';
-        wr_eof_in2_out1  <= '1';
+        WAIT UNTIL rising_edge(clk);
+        wr_data_in0_out1 <= STD_LOGIC_VECTOR(to_unsigned(80 + 3, 8));
+        wr_data_in2_out1 <= STD_LOGIC_VECTOR(to_unsigned(112 + 3, 8));
+        wr_eof_in0_out1 <= '1';
+        wr_eof_in2_out1 <= '1';
 
-        wait until rising_edge(clk);
-        wr_en_in0_out1 <= '0'; wr_eof_in0_out1 <= '0';
-        wr_en_in2_out1 <= '0'; wr_eof_in2_out1 <= '0';
+        WAIT UNTIL rising_edge(clk);
+        wr_en_in0_out1 <= '0';
+        wr_eof_in0_out1 <= '0';
+        wr_en_in2_out1 <= '0';
+        wr_eof_in2_out1 <= '0';
 
-        wait for 30 * CLK_PERIOD;
+        WAIT FOR 30 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
         -- TEST 3: Output 2 bekommt nur Input 3
         -- Datenmuster: 0x90..
         -----------------------------------------------------------------------
-        report "TEST 3: Output 2, Input 3" severity note;
-        for i in 0 to 2 loop
-            wait until rising_edge(clk);
+        REPORT "TEST 3: Output 2, Input 3" SEVERITY note;
+        FOR i IN 0 TO 2 LOOP
+            WAIT UNTIL rising_edge(clk);
             wr_en_in3_out2 <= '1';
-            wr_data_in3_out2 <= std_logic_vector(to_unsigned(144 + i, 8));
+            wr_data_in3_out2 <= STD_LOGIC_VECTOR(to_unsigned(144 + i, 8));
             wr_eof_in3_out2 <= '0';
-        end loop;
+        END LOOP;
 
-        wait until rising_edge(clk);
-        wr_data_in3_out2 <= std_logic_vector(to_unsigned(144 + 3, 8));
-        wr_eof_in3_out2  <= '1';
+        WAIT UNTIL rising_edge(clk);
+        wr_data_in3_out2 <= STD_LOGIC_VECTOR(to_unsigned(144 + 3, 8));
+        wr_eof_in3_out2 <= '1';
 
-        wait until rising_edge(clk);
-        wr_en_in3_out2 <= '0'; wr_eof_in3_out2 <= '0';
+        WAIT UNTIL rising_edge(clk);
+        wr_en_in3_out2 <= '0';
+        wr_eof_in3_out2 <= '0';
 
-        wait for 30 * CLK_PERIOD;
+        WAIT FOR 30 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
         -- TEST 4: Output 3 bekommt Input 1 und 2
         -- Datenmuster: 0xA0.. und 0xB0..
         -----------------------------------------------------------------------
-        report "TEST 4: Output 3, Inputs 1 und 2" severity note;
-        for i in 0 to 1 loop
-            wait until rising_edge(clk);
+        REPORT "TEST 4: Output 3, Inputs 1 und 2" SEVERITY note;
+        FOR i IN 0 TO 1 LOOP
+            WAIT UNTIL rising_edge(clk);
             wr_en_in1_out3 <= '1';
-            wr_data_in1_out3 <= std_logic_vector(to_unsigned(160 + i, 8));
+            wr_data_in1_out3 <= STD_LOGIC_VECTOR(to_unsigned(160 + i, 8));
             wr_eof_in1_out3 <= '0';
 
             wr_en_in2_out3 <= '1';
-            wr_data_in2_out3 <= std_logic_vector(to_unsigned(176 + i, 8));
+            wr_data_in2_out3 <= STD_LOGIC_VECTOR(to_unsigned(176 + i, 8));
             wr_eof_in2_out3 <= '0';
-        end loop;
+        END LOOP;
 
-        wait until rising_edge(clk);
-        wr_data_in1_out3 <= std_logic_vector(to_unsigned(160 + 2, 8));
-        wr_data_in2_out3 <= std_logic_vector(to_unsigned(176 + 2, 8));
-        wr_eof_in1_out3  <= '1';
-        wr_eof_in2_out3  <= '1';
+        WAIT UNTIL rising_edge(clk);
+        wr_data_in1_out3 <= STD_LOGIC_VECTOR(to_unsigned(160 + 2, 8));
+        wr_data_in2_out3 <= STD_LOGIC_VECTOR(to_unsigned(176 + 2, 8));
+        wr_eof_in1_out3 <= '1';
+        wr_eof_in2_out3 <= '1';
 
-        wait until rising_edge(clk);
-        wr_en_in1_out3 <= '0'; wr_eof_in1_out3 <= '0';
-        wr_en_in2_out3 <= '0'; wr_eof_in2_out3 <= '0';
+        WAIT UNTIL rising_edge(clk);
+        wr_en_in1_out3 <= '0';
+        wr_eof_in1_out3 <= '0';
+        wr_en_in2_out3 <= '0';
+        wr_eof_in2_out3 <= '0';
 
-        wait for 50 * CLK_PERIOD;
+        WAIT FOR 50 * CLK_PERIOD;
 
-        report "TB finished" severity note;
-        wait;
-    end process;
+        REPORT "TB finished" SEVERITY note;
+        WAIT;
+    END PROCESS;
 
-end architecture;
+END ARCHITECTURE;

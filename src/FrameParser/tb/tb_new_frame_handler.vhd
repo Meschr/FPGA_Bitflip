@@ -1,180 +1,180 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-use ieee.std_logic_textio.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
+USE ieee.std_logic_textio.ALL;
 
-library std;
-use std.textio.all;
-use std.env.all;
+LIBRARY std;
+USE std.textio.ALL;
+USE std.env.ALL;
 
-entity tb_new_frame_handler is
-end entity tb_new_frame_handler;
+ENTITY tb_new_frame_handler IS
+END ENTITY tb_new_frame_handler;
 
-architecture tb of tb_new_frame_handler is
+ARCHITECTURE tb OF tb_new_frame_handler IS
 
     -- Clock period
-    constant CLK_PERIOD : time := 10 ns;
+    CONSTANT CLK_PERIOD : TIME := 10 ns;
 
     -- Signals for DUT ports
-    signal clk   : std_logic := '0';
-    signal reset : std_logic := '1';
-    
+    SIGNAL clk : STD_LOGIC := '0';
+    SIGNAL reset : STD_LOGIC := '1';
+
     -- Inputs to frame_handler
-    signal data_in    : std_logic_vector(7 downto 0) := (others => '0');
-    signal data_valid : std_logic := '0';
-    signal buffer_dest_port : std_logic_vector(3 downto 0) := (others => '0');
-    signal buffer_dest_port_flag : std_logic := '0';
+    SIGNAL data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL data_valid : STD_LOGIC := '0';
+    SIGNAL buffer_dest_port : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL buffer_dest_port_flag : STD_LOGIC := '0';
 
     -- Outputs from frame_handler
-    signal data_out    : std_logic_vector(7 downto 0);
-    signal dst_port    : std_logic_vector(3 downto 0);
-    signal crc_valid   : std_logic;
-    signal eof_handler : std_logic;
-    signal frame_rdy_handler : std_logic;
-    signal full_buffer : std_logic_vector(3 downto 0);
+    SIGNAL data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    SIGNAL dst_port : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL crc_valid : STD_LOGIC;
+    SIGNAL eof_handler : STD_LOGIC;
+    SIGNAL frame_rdy_handler : STD_LOGIC;
+    SIGNAL full_buffer : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-    file stimulus_file : text open read_mode is "src/stimulus.txt";
+    FILE stimulus_file : text OPEN read_mode IS "src/stimulus.txt";
 
-    function contains_str(source : string; needle : string) return boolean is
-        variable match : boolean;
-    begin
-        if needle'length = 0 then
-            return true;
-        end if;
+    FUNCTION contains_str(source : STRING; needle : STRING) RETURN BOOLEAN IS
+        VARIABLE match : BOOLEAN;
+    BEGIN
+        IF needle'length = 0 THEN
+            RETURN true;
+        END IF;
 
-        if source'length < needle'length then
-            return false;
-        end if;
+        IF source'length < needle'length THEN
+            RETURN false;
+        END IF;
 
-        for start_idx in source'low to source'high - needle'length + 1 loop
+        FOR start_idx IN source'low TO source'high - needle'length + 1 LOOP
             match := true;
-            for needle_idx in needle'range loop
-                if source(start_idx + (needle_idx - needle'low)) /= needle(needle_idx) then
+            FOR needle_idx IN needle'RANGE LOOP
+                IF source(start_idx + (needle_idx - needle'low)) /= needle(needle_idx) THEN
                     match := false;
-                    exit;
-                end if;
-            end loop;
-            if match then
-                return true;
-            end if;
-        end loop;
+                    EXIT;
+                END IF;
+            END LOOP;
+            IF match THEN
+                RETURN true;
+            END IF;
+        END LOOP;
 
-        return false;
-    end function;
+        RETURN false;
+    END FUNCTION;
 
-    procedure send_wire_frame(
-        signal clk_i : in std_logic;
-        signal din_o : out std_logic_vector(7 downto 0);
-        signal dv_o  : out std_logic;
-        variable frame_line : inout line
-    ) is
-        variable byte_v : std_logic_vector(7 downto 0);
-    begin
-        while frame_line.all'length > 0 loop
+    PROCEDURE send_wire_frame(
+        SIGNAL clk_i : IN STD_LOGIC;
+        SIGNAL din_o : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+        SIGNAL dv_o : OUT STD_LOGIC;
+        VARIABLE frame_line : INOUT line
+    ) IS
+        VARIABLE byte_v : STD_LOGIC_VECTOR(7 DOWNTO 0);
+    BEGIN
+        WHILE frame_line.ALL'length > 0 LOOP
             hread(frame_line, byte_v);
             din_o <= byte_v;
-            dv_o  <= '1';
-            wait until rising_edge(clk_i);
-        end loop;
+            dv_o <= '1';
+            WAIT UNTIL rising_edge(clk_i);
+        END LOOP;
 
-        dv_o  <= '0';
-        din_o <= (others => '0');
-        wait until rising_edge(clk_i);
-    end procedure;
+        dv_o <= '0';
+        din_o <= (OTHERS => '0');
+        WAIT UNTIL rising_edge(clk_i);
+    END PROCEDURE;
 
-begin
+BEGIN
 
     -- ===================================================================
     -- DUT Instantiation
     -- ===================================================================
-    u_dut : entity work.frame_handler
-    port map (
-        clk   => clk,
-        reset => reset,
-        data_in    => data_in,
-        data_valid => data_valid,
-        buffer_dest_port => buffer_dest_port,
-        buffer_dest_port_flag => buffer_dest_port_flag,
-        data_out    => data_out,
-        dst_port    => dst_port,
-        crc_valid   => crc_valid,
-        eof_handler => eof_handler,
-        frame_rdy_handler => frame_rdy_handler,
-        full_buffer => full_buffer
-    );
+    u_dut : ENTITY work.frame_handler
+        PORT MAP(
+            clk => clk,
+            reset => reset,
+            data_in => data_in,
+            data_valid => data_valid,
+            buffer_dest_port => buffer_dest_port,
+            buffer_dest_port_flag => buffer_dest_port_flag,
+            data_out => data_out,
+            dst_port => dst_port,
+            crc_valid => crc_valid,
+            eof_handler => eof_handler,
+            frame_rdy => frame_rdy_handler,
+            full_buffer => full_buffer
+        );
 
     -- ===================================================================
     -- Clock Generator
     -- ===================================================================
-    clock_proc : process
-    begin
+    clock_proc : PROCESS
+    BEGIN
         clk <= '0';
-        wait for CLK_PERIOD / 2;
+        WAIT FOR CLK_PERIOD / 2;
         clk <= '1';
-        wait for CLK_PERIOD / 2;
-    end process clock_proc;
+        WAIT FOR CLK_PERIOD / 2;
+    END PROCESS clock_proc;
 
     -- ===================================================================
     -- Main Test Process
     -- ===================================================================
-    test_proc : process
-        variable comment_line : line;
-        variable frame_line   : line;
-        variable blank_line   : line;
-        variable frame_index  : natural := 0;
-    begin
+    test_proc : PROCESS
+        VARIABLE comment_line : line;
+        VARIABLE frame_line : line;
+        VARIABLE blank_line : line;
+        VARIABLE frame_index : NATURAL := 0;
+    BEGIN
         -- Reset the DUT
         reset <= '1';
-        data_in <= (others => '0');
+        data_in <= (OTHERS => '0');
         data_valid <= '0';
-        buffer_dest_port <= (others => '0');
+        buffer_dest_port <= (OTHERS => '0');
         buffer_dest_port_flag <= '0';
-        wait for 3 * CLK_PERIOD;
+        WAIT FOR 3 * CLK_PERIOD;
         reset <= '0';
-        
-        wait for 4 * CLK_PERIOD;
 
-        while not endfile(stimulus_file) loop
+        WAIT FOR 4 * CLK_PERIOD;
+
+        WHILE NOT endfile(stimulus_file) LOOP
             readline(stimulus_file, comment_line);
 
-            if comment_line.all'length = 0 then
-                next;
-            end if;
+            IF comment_line.ALL'length = 0 THEN
+                NEXT;
+            END IF;
 
-            if comment_line.all(comment_line.all'low) = '#' then
+            IF comment_line.ALL(comment_line.ALL'low) = '#' THEN
                 frame_index := frame_index + 1;
 
-                if frame_index = 1 then
+                IF frame_index = 1 THEN
                     buffer_dest_port <= "0001";
-                elsif frame_index = 2 then
+                ELSIF frame_index = 2 THEN
                     buffer_dest_port <= "0010";
-                else
+                ELSE
                     buffer_dest_port <= "0100";
-                end if;
+                END IF;
                 buffer_dest_port_flag <= '1';
-                wait until rising_edge(clk);
+                WAIT UNTIL rising_edge(clk);
                 buffer_dest_port_flag <= '0';
 
-                if contains_str(comment_line.all, "Corrupt") then
-                    report "Stimulus corrupt frame " & integer'image(frame_index) & ": " & comment_line.all severity note;
-                else
-                    report "Stimulus valid frame " & integer'image(frame_index) & ": " & comment_line.all severity note;
-                end if;
+                IF contains_str(comment_line.ALL, "Corrupt") THEN
+                    REPORT "Stimulus corrupt frame " & INTEGER'image(frame_index) & ": " & comment_line.ALL SEVERITY note;
+                ELSE
+                    REPORT "Stimulus valid frame " & INTEGER'image(frame_index) & ": " & comment_line.ALL SEVERITY note;
+                END IF;
 
-                if not endfile(stimulus_file) then
+                IF NOT endfile(stimulus_file) THEN
                     readline(stimulus_file, frame_line);
                     send_wire_frame(clk, data_in, data_valid, frame_line);
-                end if;
+                END IF;
 
-                if not endfile(stimulus_file) then
+                IF NOT endfile(stimulus_file) THEN
                     readline(stimulus_file, blank_line);
-                end if;
-            end if;
-        end loop;
+                END IF;
+            END IF;
+        END LOOP;
 
-        wait for 10 * CLK_PERIOD;
-        report "Finished replaying stimulus.txt" severity note;
+        WAIT FOR 10 * CLK_PERIOD;
+        REPORT "Finished replaying stimulus.txt" SEVERITY note;
         finish;
-    end process test_proc;
+    END PROCESS test_proc;
 
-end architecture tb;
+END ARCHITECTURE tb;

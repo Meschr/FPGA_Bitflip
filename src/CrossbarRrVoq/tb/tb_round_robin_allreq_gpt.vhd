@@ -23,60 +23,60 @@
 --   - active bleibt '1' waehrend LOCKED, faellt kurz auf '0' beim Wechsel
 -- =============================================================================
 
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
-entity tb_round_robin_allreq_gpt is
-end entity;
+ENTITY tb_round_robin_allreq_gpt IS
+END ENTITY;
 
-architecture sim of tb_round_robin_allreq_gpt is
+ARCHITECTURE sim OF tb_round_robin_allreq_gpt IS
 
-    signal clk       : std_logic := '0';
-    signal reset     : std_logic := '1';
-    signal frame_rdy : std_logic_vector(3 downto 0) := (others => '0');
-    signal eof       : std_logic := '0';
+    SIGNAL clk : STD_LOGIC := '0';
+    SIGNAL reset : STD_LOGIC := '1';
+    SIGNAL frame_rdy : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL eof : STD_LOGIC := '0';
 
-    signal sel       : std_logic_vector(1 downto 0);
-    signal grant     : std_logic_vector(3 downto 0);
-    signal active    : std_logic;
+    SIGNAL sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL grant : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL active : STD_LOGIC;
 
-    constant CLK_PERIOD : time := 10 ns;
+    CONSTANT CLK_PERIOD : TIME := 10 ns;
 
-begin
+BEGIN
 
     ------------------------------------------------------------------------
     -- DUT
     ------------------------------------------------------------------------
-    dut : entity work.round_robin
-        port map (
-            clk       => clk,
-            reset     => reset,
+    dut : ENTITY work.round_robin
+        PORT MAP(
+            clk => clk,
+            reset => reset,
             frame_rdy => frame_rdy,
-            eof       => eof,
-            sel       => sel,
-            grant     => grant,
-            active    => active
+            eof => eof,
+            sel => sel,
+            grant => grant,
+            active => active
         );
 
     ------------------------------------------------------------------------
     -- Clock
     ------------------------------------------------------------------------
-    clk <= not clk after CLK_PERIOD/2;
+    clk <= NOT clk AFTER CLK_PERIOD/2;
 
     ------------------------------------------------------------------------
     -- Stimulus
     ------------------------------------------------------------------------
-    stim_proc : process
-    begin
+    stim_proc : PROCESS
+    BEGIN
         --------------------------------------------------------------------
         -- Reset phase
         --------------------------------------------------------------------
         frame_rdy <= "0000";
-        eof       <= '0';
+        eof <= '0';
 
-        wait until rising_edge(clk);
-        wait until rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
 
         reset <= '0';
 
@@ -89,34 +89,34 @@ begin
         -- Generate repeated frames
         -- Each frame lasts 2 clock cycles in LOCKED, then eof is asserted
         --------------------------------------------------------------------
-        for i in 0 to 11 loop
+        FOR i IN 0 TO 11 LOOP
             -- first cycle of frame
             eof <= '0';
-            wait until rising_edge(clk);
+            WAIT UNTIL rising_edge(clk);
 
             -- second cycle of frame
             eof <= '0';
-            wait until rising_edge(clk);
+            WAIT UNTIL rising_edge(clk);
 
             -- end of frame
             eof <= '1';
-            wait until rising_edge(clk);
+            WAIT UNTIL rising_edge(clk);
 
             -- deassert eof again
             eof <= '0';
-        end loop;
+        END LOOP;
 
         --------------------------------------------------------------------
         -- Stop requesting and finish
         --------------------------------------------------------------------
         frame_rdy <= "0000";
-        eof       <= '0';
+        eof <= '0';
 
-        wait until rising_edge(clk);
-        wait until rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
 
-        report "tb_round_robin_allreq_gpt finished." severity note;
-        wait;
-    end process;
+        REPORT "tb_round_robin_allreq_gpt finished." SEVERITY note;
+        WAIT;
+    END PROCESS;
 
-end architecture;
+END ARCHITECTURE;
