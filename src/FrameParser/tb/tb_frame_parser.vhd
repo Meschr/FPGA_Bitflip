@@ -275,12 +275,12 @@ BEGIN
 
   p_stim : PROCESS
   BEGIN
-    reset <= '1';
+    reset <= '0';
     data_valid <= '0';
     data_in <= (OTHERS => '0');
     WAIT FOR 3 * CLK_PERIOD;
     WAIT UNTIL rising_edge(clk);
-    reset <= '0';
+    reset <= '1';
 
     REPORT "=== Comprehensive parser test: multiple lengths and MACs ===";
 

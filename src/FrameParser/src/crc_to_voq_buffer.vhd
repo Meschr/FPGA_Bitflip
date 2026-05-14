@@ -93,6 +93,8 @@ BEGIN
     crc_valid_out <= '1' WHEN (rd_valid_reg = '1' AND eof = '1' AND crc_valid = '1') ELSE
         '0'; ---TBD NOCH nicht fertig
 
+
+
     write_proc : PROCESS (clk)
     BEGIN
         IF rising_edge(clk) THEN
@@ -102,29 +104,33 @@ BEGIN
             END IF;
         END IF;
     END PROCESS write_proc;
+
+
+
     read_proc : PROCESS (clk)
     BEGIN
         IF rising_edge(clk) THEN
-            IF reset = '1' OR flush = '1' THEN
-                rd_reg <= (OTHERS => '0');
-            ELSIF can_read = '1' THEN
+            IF can_read = '1' THEN
                 -- Lade Byte aus RAM: EOF-Flag + Datenbyte
                 rd_reg <= ram(to_integer(rd_ptr));
-
             END IF;
         END IF;
     END PROCESS read_proc;
+
+
+
     -- Dekodiere das Read-Register
     rd_data <= rd_reg(7 DOWNTO 0); -- Lower 8 Bits = Daten
 
     -- rd_eof ist nur gueltig, wenn rd_valid_reg='1'
     rd_eof <= rd_reg(8) AND rd_valid_reg; -- Bit 8 = EOF-Flag
     eof <= rd_reg(8) AND rd_valid_reg;
+
     ptr_proc : PROCESS (clk)
         VARIABLE count_next : unsigned(count'RANGE);
     BEGIN
-        IF rising_edge(clk) THEN
-            IF reset = '1' OR flush = '1' THEN
+
+        IF reset = '0' OR flush = '1' THEN
                 -- Reset: Alle Pointer auf 0, FIFO ist leer
                 wr_ptr <= (OTHERS => '0');
                 rd_ptr <= (OTHERS => '0');
@@ -132,7 +138,8 @@ BEGIN
                 rd_valid_reg <= '0';
                 rd_active <= '0';
                 dest_port_reg <= (OTHERS => '0');
-            ELSE
+
+         ELSIF rising_edge(clk) THEN
                 -- rd_valid_reg folgt can_read: wird '1' wenn gerade ein Byte gelesen wurde
                 rd_valid_reg <= can_read;
 
@@ -164,7 +171,6 @@ BEGIN
                 count <= count_next;
 
             END IF;
-        END IF;
     END PROCESS ptr_proc;
 
 END ARCHITECTURE rtl;

@@ -67,7 +67,7 @@ ARCHITECTURE sim OF tb_crc_to_voq_buffer IS
     -- DUT-Signale
     ---------------------------------------------------------------------------
     SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '1';
+    SIGNAL reset : STD_LOGIC := '0';
     SIGNAL flush : STD_LOGIC := '0';
     SIGNAL sim_done : BOOLEAN := false;
 
@@ -193,10 +193,10 @@ BEGIN
         -- Reset-Phase
         -----------------------------------------------------------------------
         REPORT "Reset...";
-        reset <= '1';
+        reset <= '0';
         WAIT FOR 4 * CLK_PERIOD;
         WAIT UNTIL rising_edge(clk);
-        reset <= '0';
+        reset <= '1';
         WAIT FOR 2 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
