@@ -83,17 +83,17 @@ BEGIN
 
           WHEN SFD => -- Expecting the Start of Frame Delimiter (SFD) which should be 0xD5.
             IF data_in = x"D5" THEN
-              data_out <= data_in; -- Forward SFD to FCS checker
+              data_out <= data_in; 
               state <= DST;
             ELSE -- If we receive a byte that is not 0xD5, its error
               state <= ERR;
             END IF;
 
           WHEN DST =>
-            data_out <= data_in; -- from here on we write to the FCS checker
+            data_out <= data_in; 
 
             IF byte_cnt = 8 THEN
-              sof <= '1'; -- Align SOF with first byte forwarded to CRC checker
+              sof <= '1'; -- Pulse SOF when the first byte of the destination MAC is received
             END IF;
 
             CASE byte_cnt IS
@@ -107,13 +107,13 @@ BEGIN
             END CASE;
 
             IF byte_cnt = 13 THEN
+              dst_valid <= '1';
+              dst_mac <= dst_buf(47 DOWNTO 8) & data_in;
               state <= SRC;
             END IF;
 
           WHEN SRC => 
             data_out <= data_in;
-            dst_valid <= '1';
-            dst_mac <= dst_buf;
 
             CASE byte_cnt IS
               WHEN 14 => src_buf(47 DOWNTO 40) <= data_in;
@@ -126,13 +126,12 @@ BEGIN
             END CASE;
 
             IF byte_cnt = 19 THEN
+            src_valid <= '1';
+            src_mac <= src_buf(47 DOWNTO 8) & data_in;
             state <= ETHER_PAYLOAD_FCS;
             END IF;
 
           WHEN ETHER_PAYLOAD_FCS =>
-            src_valid <= '1';
-            src_mac <= src_buf;
-
             -- Forward bytes while data_valid is high.
             data_out <= data_in;
             byte_cnt <= byte_cnt + 1;

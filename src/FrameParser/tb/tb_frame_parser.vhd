@@ -16,10 +16,10 @@ ARCHITECTURE sim OF tb_frame_parser IS
   SIGNAL data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
   SIGNAL sof : STD_LOGIC;
   SIGNAL eof : STD_LOGIC;
-  SIGNAL lof : STD_LOGIC;
   SIGNAL dst_mac : STD_LOGIC_VECTOR(47 DOWNTO 0);
   SIGNAL src_mac : STD_LOGIC_VECTOR(47 DOWNTO 0);
-  SIGNAL macs_valid : STD_LOGIC;
+  SIGNAL dst_valid : STD_LOGIC;
+  SIGNAL src_valid : STD_LOGIC;
 
   TYPE byte_array_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
 
@@ -105,8 +105,9 @@ ARCHITECTURE sim OF tb_frame_parser IS
     SIGNAL din_o : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL dv_o : OUT STD_LOGIC;
     SIGNAL sof_i : IN STD_LOGIC;
-    SIGNAL mv_i : IN STD_LOGIC;
-    SIGNAL lof_i : IN STD_LOGIC
+    SIGNAL dst_valid_i : IN STD_LOGIC;
+    SIGNAL src_valid_i : IN STD_LOGIC;
+    CONSTANT sfd_byte : IN STD_LOGIC_VECTOR(7 DOWNTO 0)
   ) IS
   BEGIN
     FOR i IN PREAMBLE_BYTES'RANGE LOOP
@@ -117,17 +118,17 @@ ARCHITECTURE sim OF tb_frame_parser IS
       ASSERT sof_i = '0'
       REPORT "SOF asserted during preamble index " & INTEGER'image(i)
         SEVERITY error;
-      ASSERT mv_i = '0' AND lof_i = '0'
-      REPORT "macs_valid/lof asserted during preamble"
+      ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+      REPORT "dst_valid/src_valid asserted during preamble"
         SEVERITY error;
     END LOOP;
 
-    din_o <= x"D5";
+    din_o <= sfd_byte;
     dv_o <= '1';
     WAIT UNTIL rising_edge(clk_i);
     WAIT FOR 0 ns;
-    ASSERT sof_i = '1'
-    REPORT "SOF not asserted on SFD cycle"
+    ASSERT sof_i = '0'
+    REPORT "SOF must stay low on the SFD cycle"
       SEVERITY error;
   END PROCEDURE;
 
@@ -150,8 +151,8 @@ ARCHITECTURE sim OF tb_frame_parser IS
     SIGNAL data_out_i : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL sof_i : IN STD_LOGIC;
     SIGNAL eof_i : IN STD_LOGIC;
-    SIGNAL lof_i : IN STD_LOGIC;
-    SIGNAL mv_i : IN STD_LOGIC;
+    SIGNAL dst_valid_i : IN STD_LOGIC;
+    SIGNAL src_valid_i : IN STD_LOGIC;
     SIGNAL dst_i : IN STD_LOGIC_VECTOR(47 DOWNTO 0);
     SIGNAL src_i : IN STD_LOGIC_VECTOR(47 DOWNTO 0);
     CONSTANT dst : IN byte_array_t(0 TO 5);
@@ -169,7 +170,7 @@ ARCHITECTURE sim OF tb_frame_parser IS
 
     REPORT "--- " & name & " ---";
 
-      send_preamble_and_sfd(clk_i, din_o, dv_o, sof_i, mv_i, lof_i);
+    send_preamble_and_sfd(clk_i, din_o, dv_o, sof_i, dst_valid_i, src_valid_i, x"D5");
 
     FOR i IN dst'RANGE LOOP
       drive_byte(clk_i, din_o, dv_o, dst(i));
@@ -177,9 +178,27 @@ ARCHITECTURE sim OF tb_frame_parser IS
       ASSERT data_out_i = dst(i)
       REPORT "data_out mismatch in DST index " & INTEGER'image(i)
         SEVERITY error;
-      ASSERT mv_i = '0' AND lof_i = '0'
-      REPORT "macs_valid/lof asserted too early in DST"
-        SEVERITY error;
+      IF i = dst'left THEN
+        ASSERT sof_i = '1'
+        REPORT "SOF missing on first DST byte"
+          SEVERITY error;
+      ELSE
+        ASSERT sof_i = '0'
+        REPORT "SOF asserted outside first DST byte"
+          SEVERITY error;
+      END IF;
+      IF i = dst'right THEN
+        ASSERT dst_valid_i = '1' AND src_valid_i = '0'
+        REPORT "dst_valid/src_valid missing on last DST byte"
+          SEVERITY error;
+        ASSERT dst_i = exp_dst
+        REPORT "dst_mac mismatch"
+          SEVERITY error;
+      ELSE
+        ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+        REPORT "dst_valid/src_valid asserted too early in DST"
+          SEVERITY error;
+      END IF;
     END LOOP;
 
     FOR i IN src'RANGE LOOP
@@ -188,9 +207,18 @@ ARCHITECTURE sim OF tb_frame_parser IS
       ASSERT data_out_i = src(i)
       REPORT "data_out mismatch in SRC index " & INTEGER'image(i)
         SEVERITY error;
-      ASSERT mv_i = '0' AND lof_i = '0'
-      REPORT "macs_valid/lof asserted too early in SRC"
-        SEVERITY error;
+      IF i = src'right THEN
+        ASSERT dst_valid_i = '0' AND src_valid_i = '1'
+        REPORT "dst_valid/src_valid missing on last SRC byte"
+          SEVERITY error;
+        ASSERT src_i = exp_src
+        REPORT "src_mac mismatch"
+          SEVERITY error;
+      ELSE
+        ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+        REPORT "dst_valid/src_valid asserted too early in SRC"
+          SEVERITY error;
+      END IF;
     END LOOP;
 
     drive_byte(clk_i, din_o, dv_o, len_f(0));
@@ -198,23 +226,17 @@ ARCHITECTURE sim OF tb_frame_parser IS
     ASSERT data_out_i = len_f(0)
     REPORT "data_out mismatch in LEN byte 0"
       SEVERITY error;
-    ASSERT mv_i = '0' AND lof_i = '0'
-    REPORT "macs_valid/lof asserted too early in LEN byte 0"
-      SEVERITY error;
 
     drive_byte(clk_i, din_o, dv_o, len_f(1));
     WAIT FOR 0 ns;
     ASSERT data_out_i = len_f(1)
     REPORT "data_out mismatch in LEN byte 1"
       SEVERITY error;
-    ASSERT mv_i = '1' AND lof_i = '1'
-    REPORT "macs_valid/lof missing on LEN byte 1"
+    ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+    REPORT "dst_valid/src_valid asserted too early in LEN byte 1"
       SEVERITY error;
-    ASSERT dst_i = exp_dst
-    REPORT "dst_mac mismatch"
-      SEVERITY error;
-    ASSERT src_i = exp_src
-    REPORT "src_mac mismatch"
+    ASSERT sof_i = '0'
+    REPORT "SOF must stay low after DST"
       SEVERITY error;
 
     FOR i IN payload'RANGE LOOP
@@ -223,15 +245,12 @@ ARCHITECTURE sim OF tb_frame_parser IS
       ASSERT data_out_i = payload(i)
       REPORT "data_out mismatch in payload index " & INTEGER'image(i)
         SEVERITY error;
-      IF i = payload'right THEN
-        ASSERT eof_i = '1'
-        REPORT "EOF missing on last payload byte"
-          SEVERITY error;
-      ELSE
-        ASSERT eof_i = '0'
-        REPORT "EOF asserted before last payload byte"
-          SEVERITY error;
-      END IF;
+      ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+      REPORT "dst_valid/src_valid asserted during payload"
+        SEVERITY error;
+      ASSERT eof_i = '0'
+      REPORT "EOF asserted before frame end"
+        SEVERITY error;
     END LOOP;
 
     FOR i IN fcs'RANGE LOOP
@@ -239,6 +258,9 @@ ARCHITECTURE sim OF tb_frame_parser IS
       WAIT FOR 0 ns;
       ASSERT data_out_i = fcs(i)
       REPORT "data_out mismatch in FCS index " & INTEGER'image(i)
+        SEVERITY error;
+      ASSERT dst_valid_i = '0' AND src_valid_i = '0'
+      REPORT "dst_valid/src_valid asserted during FCS"
         SEVERITY error;
       ASSERT eof_i = '0'
       REPORT "EOF must be pulse-only"
@@ -249,6 +271,9 @@ ARCHITECTURE sim OF tb_frame_parser IS
     din_o <= (OTHERS => '0');
     WAIT UNTIL rising_edge(clk_i);
     WAIT FOR 0 ns;
+    ASSERT eof_i = '1'
+    REPORT "EOF missing after data_valid falls"
+      SEVERITY error;
   END PROCEDURE;
 
 BEGIN
@@ -261,7 +286,9 @@ BEGIN
       data_out => data_out,
       sof => sof,
       eof => eof,
+      dst_valid => dst_valid,
       dst_mac => dst_mac,
+      src_valid => src_valid,
       src_mac => src_mac
     );
 
@@ -285,19 +312,53 @@ BEGIN
     REPORT "=== Comprehensive parser test: multiple lengths and MACs ===";
 
     check_full_frame(
-    clk, data_in, data_valid, data_out, sof, eof, lof, macs_valid, dst_mac, src_mac,
+    clk, data_in, data_valid, data_out, sof, eof, dst_valid, src_valid, dst_mac, src_mac,
     DST_A, SRC_A, LEN_A, PAYLOAD_A, FCS_A, "Frame A (len=10)"
     );
 
+    FOR i IN 1 TO 5 LOOP
+      data_valid <= '0';
+      data_in <= (OTHERS => '0');
+      WAIT UNTIL rising_edge(clk);
+      WAIT FOR 0 ns;
+    END LOOP;
+
     check_full_frame(
-    clk, data_in, data_valid, data_out, sof, eof, lof, macs_valid, dst_mac, src_mac,
+    clk, data_in, data_valid, data_out, sof, eof, dst_valid, src_valid, dst_mac, src_mac,
     DST_B, SRC_B, LEN_B, PAYLOAD_B, FCS_B, "Frame B (len=4)"
     );
 
+    FOR i IN 1 TO 5 LOOP
+      data_valid <= '0';
+      data_in <= (OTHERS => '0');
+      WAIT UNTIL rising_edge(clk);
+      WAIT FOR 0 ns;
+    END LOOP;
+
     check_full_frame(
-    clk, data_in, data_valid, data_out, sof, eof, lof, macs_valid, dst_mac, src_mac,
+    clk, data_in, data_valid, data_out, sof, eof, dst_valid, src_valid, dst_mac, src_mac,
     DST_C, SRC_C, LEN_C, PAYLOAD_C, FCS_C, "Frame C (len=16)"
     );
+
+    FOR i IN 1 TO 5 LOOP
+      data_valid <= '0';
+      data_in <= (OTHERS => '0');
+      WAIT UNTIL rising_edge(clk);
+      WAIT FOR 0 ns;
+    END LOOP;
+
+    REPORT "--- Corrupt frame (ERR state) ---";
+    send_preamble_and_sfd(clk, data_in, data_valid, sof, dst_valid, src_valid, x"00");
+    data_valid <= '0';
+    data_in <= (OTHERS => '0');
+    WAIT UNTIL rising_edge(clk);
+    WAIT FOR 0 ns;
+    ASSERT eof = '1'
+      REPORT "EOF missing after bad SFD"
+      SEVERITY error;
+    ASSERT dst_valid = '0' AND src_valid = '0'
+      REPORT "Valid pulses must stay low in ERR state"
+      SEVERITY error;
 
     REPORT "All comprehensive parser checks passed." SEVERITY note;
     std.env.stop;
