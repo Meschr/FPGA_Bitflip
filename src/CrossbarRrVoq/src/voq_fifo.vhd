@@ -30,9 +30,10 @@ entity voq_fifo is
         -- -----------------------------------------------------------------
         -- Schreibseite: Eingangsframe mit EOF-Markierung
         -- -----------------------------------------------------------------
-        wr_en   : in STD_LOGIC;                    -- Schreibfreigabe
-        wr_data : in STD_LOGIC_VECTOR(7 downto 0); -- Datenbyte
-        wr_eof  : in STD_LOGIC;                    -- '1' wenn dies das letzte Byte des Frames ist
+        wr_en    : in STD_LOGIC;                    -- Schreibfreigabe
+        wr_data  : in STD_LOGIC_VECTOR(7 downto 0); -- Datenbyte
+        wr_eof   : in STD_LOGIC;                    -- '1' wenn dies das letzte Byte des Frames ist
+        wr_abort : in STD_LOGIC;                    -- '1' verwirft den aktuellen Frame (CRC-Fehler)
 
         -- -----------------------------------------------------------------
         -- Leseseite: Synchrones Lesen mit rd_valid-Flag
@@ -78,6 +79,10 @@ architecture rtl of voq_fifo is
     signal count         : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Anzahl Bytes im FIFO
     signal frames_stored : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Anzahl kompletter Frames
 
+    -- Aktueller Frame-Zaehler (nur bis EOF) fuer Rollback bei CRC-Fehler
+    signal frame_active    : STD_LOGIC                    := '0';
+    signal frame_byte_cnt  : unsigned(count'range)        := (others => '0');
+
     -- Lese-Register (Pipeline-Stage)
     signal rd_reg       : STD_LOGIC_VECTOR(8 downto 0) := (others => '0'); -- Register fuer aktuell gelesene Daten (Bit 8: EOF, Bits 7-0: Daten)
     signal rd_valid_reg : STD_LOGIC                    := '0';             -- '1' wenn rd_reg frisch mit Daten gefuellt wurde
@@ -96,7 +101,7 @@ begin
     empty_int <= '1' when count = to_unsigned(0, count'length) else
         '0';
 
-    can_write <= '1' when (wr_en = '1' and full_int = '0') else
+    can_write <= '1' when (wr_en = '1' and full_int = '0' and wr_abort = '0') else
         '0';
     can_read <= '1' when (rd_en = '1' and empty_int = '0') else
         '0';
@@ -156,6 +161,8 @@ begin
             count         <= (others => '0');
             frames_stored <= (others => '0');
             rd_valid_reg  <= '0';
+            frame_active  <= '0';
+            frame_byte_cnt <= (others => '0');
         end if;
 
         if rising_edge(clk) then
@@ -163,22 +170,38 @@ begin
             rd_valid_reg <= can_read and not (rd_reg(8) and rd_valid_reg);
 
             -- Pointer- und Belegungszaehler aktualisieren
-            -- Schreiben immer zaehlen, Lesen nur wenn nicht EOF
-            if can_write = '1' then
-                wr_ptr <= wr_ptr + 1;
-            end if;
+            -- Lesen wird nur gezählt, wenn kein EOF gelesen wurde
+            count_next := count;
 
             if can_read = '1' and rd_eof = '0' then
                 rd_ptr <= rd_ptr + 1;
-            end if;
-
-            count_next := count;
-            if can_write = '1' then
-                count_next := count_next + 1;
-            end if;
-            if can_read = '1' and rd_eof = '0' then
                 count_next := count_next - 1;
             end if;
+
+            if wr_abort = '1' and frame_active = '1' then
+                wr_ptr <= wr_ptr - resize(frame_byte_cnt, wr_ptr'length);
+                count_next := count_next - frame_byte_cnt;
+                frame_byte_cnt <= (others => '0');
+                frame_active <= '0';
+            else
+                if can_write = '1' then
+                    wr_ptr <= wr_ptr + 1;
+                    count_next := count_next + 1;
+
+                    if frame_active = '0' then
+                        frame_active <= '1';
+                        frame_byte_cnt <= to_unsigned(1, frame_byte_cnt'length);
+                    else
+                        frame_byte_cnt <= frame_byte_cnt + 1;
+                    end if;
+
+                    if wr_eof = '1' then
+                        frame_active <= '0';
+                        frame_byte_cnt <= (others => '0');
+                    end if;
+                end if;
+            end if;
+
             count <= count_next;
 
             -- Frame-Zaehler: Zaehle komplette Frames

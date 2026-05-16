@@ -43,18 +43,22 @@ ENTITY voq_4to1 IS
         wr_data_in0 : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
         wr_en_in0 : IN STD_LOGIC;
         wr_eof_in0 : IN STD_LOGIC;
+        wr_abort_in0 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 0
 
         wr_data_in1 : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
         wr_en_in1 : IN STD_LOGIC;
         wr_eof_in1 : IN STD_LOGIC;
+        wr_abort_in1 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 1
 
         wr_data_in2 : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
         wr_en_in2 : IN STD_LOGIC;
         wr_eof_in2 : IN STD_LOGIC;
+        wr_abort_in2 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 2
 
         wr_data_in3 : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
         wr_en_in3 : IN STD_LOGIC;
         wr_eof_in3 : IN STD_LOGIC;
+        wr_abort_in3 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 3
 
         -- -----------------------------------------------------------------
         -- Leseseite: vom Round-Robin-Arbiter gesteuert
@@ -101,6 +105,7 @@ BEGIN
             wr_en => wr_en_in0,
             wr_data => wr_data_in0,
             wr_eof => wr_eof_in0,
+            wr_abort => wr_abort_in0,
             rd_en => rd_en(0), -- Lesefreigabe vom RR fuer Kanal 0
             rd_data => rd_data_0,
             rd_eof => rd_eof(0),
@@ -120,6 +125,7 @@ BEGIN
             wr_en => wr_en_in1,
             wr_data => wr_data_in1,
             wr_eof => wr_eof_in1,
+            wr_abort => wr_abort_in1,
             rd_en => rd_en(1), -- Lesefreigabe vom RR fuer Kanal 1
             rd_data => rd_data_1,
             rd_eof => rd_eof(1),
@@ -139,6 +145,7 @@ BEGIN
             wr_en => wr_en_in2,
             wr_data => wr_data_in2,
             wr_eof => wr_eof_in2,
+            wr_abort => wr_abort_in2,
             rd_en => rd_en(2), -- Lesefreigabe vom RR fuer Kanal 2
             rd_data => rd_data_2,
             rd_eof => rd_eof(2),
@@ -159,6 +166,7 @@ BEGIN
             wr_en => wr_en_in3,
             wr_data => wr_data_in3,
             wr_eof => wr_eof_in3,
+            wr_abort => wr_abort_in3,
             rd_en => rd_en(3), -- Lesefreigabe vom RR fuer Kanal 3
             rd_data => rd_data_3,
             rd_eof => rd_eof(3),

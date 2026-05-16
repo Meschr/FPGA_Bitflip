@@ -17,6 +17,7 @@ entity frame_handler is
         eof_handler : out STD_LOGIC; -- for voq
         dst_port    : out STD_LOGIC_VECTOR(3 downto 0);
         crc_valid   : out STD_LOGIC; -- signal for MAC learning to store dst_adr
+        fcs_error   : out STD_LOGIC; -- '1' wenn CRC fehlerhaft war
         dst_mac     : inout STD_LOGIC_VECTOR(47 downto 0);
         dst_valid   : out STD_LOGIC;
         src_mac     : inout STD_LOGIC_VECTOR(47 downto 0);
@@ -40,8 +41,9 @@ architecture rtl of frame_handler is
 
 begin
 
-    -- buffer_flush <= fcs_error_int;
+    buffer_flush <= fcs_error_int;
     crc_valid <= fcs_ok_int;
+    fcs_error <= fcs_error_int;
 
     u_frameparser : entity work.frame_parser
         port map(

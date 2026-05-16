@@ -27,6 +27,7 @@ ARCHITECTURE rtl OF framehandler_switch IS
     SIGNAL wr_en_in0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL wr_data_in0 : STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL wr_eof_in0 : STD_LOGIC;
+    SIGNAL fcs_error0 : STD_LOGIC;
 BEGIN
 
     frame_handler_inst0 : ENTITY work.frame_handler
@@ -44,7 +45,8 @@ BEGIN
             data_out => wr_data_in0,
             eof_handler => wr_eof_in0, -- for voq
             dst_port => wr_en_in0,
-            crc_valid => OPEN
+            crc_valid => OPEN,
+            fcs_error => fcs_error0
         );
 
     switch : ENTITY work.voq_rr_crossbar_switch_top
@@ -61,19 +63,23 @@ BEGIN
             wr_en_in0 => wr_en_in0,
             wr_data_in0 => wr_data_in0,
             wr_eof_in0 => wr_eof_in0,
+            wr_abort_in0 => fcs_error0,
 
             -- unused inputs tied off
             wr_en_in1 => (OTHERS => '0'),
             wr_data_in1 => (OTHERS => '0'),
             wr_eof_in1 => '0',
+            wr_abort_in1 => '0',
 
             wr_en_in2 => (OTHERS => '0'),
             wr_data_in2 => (OTHERS => '0'),
             wr_eof_in2 => '0',
+            wr_abort_in2 => '0',
 
             wr_en_in3 => (OTHERS => '0'),
             wr_data_in3 => (OTHERS => '0'),
             wr_eof_in3 => '0',
+            wr_abort_in3 => '0',
 
             out_data_0 => tx_data(7 DOWNTO 0), -- Ausgabedaten Ausgang 0
             out_data_1 => tx_data(15 DOWNTO 8), -- Ausgabedaten Ausgang 1
@@ -84,41 +90,6 @@ BEGIN
             out_valid_0 => tx_ctrl(0),
             out_valid_1 => tx_ctrl(1),
             out_valid_2 => tx_ctrl(2),
-            out_valid_3 => tx_ctrl(3),
-
-            rr_sel_0 => OPEN,
-            rr_sel_1 => OPEN,
-            rr_sel_2 => OPEN,
-            rr_sel_3 => OPEN,
-
-            rr_grant_0 => OPEN,
-            rr_grant_1 => OPEN,
-            rr_grant_2 => OPEN,
-            rr_grant_3 => OPEN,
-
-            rr_active_0 => OPEN,
-            rr_active_1 => OPEN,
-            rr_active_2 => OPEN,
-            rr_active_3 => OPEN,
-
-            frame_rdy_dbg_0 => OPEN,
-            frame_rdy_dbg_1 => OPEN,
-            frame_rdy_dbg_2 => OPEN,
-            frame_rdy_dbg_3 => OPEN,
-
-            rd_eof_dbg_0 => OPEN,
-            rd_eof_dbg_1 => OPEN,
-            rd_eof_dbg_2 => OPEN,
-            rd_eof_dbg_3 => OPEN,
-
-            full_dbg_0 => OPEN,
-            full_dbg_1 => OPEN,
-            full_dbg_2 => OPEN,
-            full_dbg_3 => OPEN,
-
-            empty_dbg_0 => OPEN,
-            empty_dbg_1 => OPEN,
-            empty_dbg_2 => OPEN,
-            empty_dbg_3 => OPEN
+            out_valid_3 => tx_ctrl(3)
         );
 END ARCHITECTURE rtl;

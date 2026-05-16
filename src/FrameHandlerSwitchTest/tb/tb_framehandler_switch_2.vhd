@@ -23,6 +23,9 @@ architecture sim of tb_framehandler_switch_2 is
   signal rx_ctrl : std_logic_vector(3 downto 0) := (others => '0');
 
   type byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
+  type count_array_t is array (natural range <>) of natural;
+
+  signal tx_byte_count : count_array_t(0 to 3) := (others => 0);
 
   constant PREAMBLE_BYTES : byte_array_t(0 to 6) := (
     x"55", x"55", x"55", x"55", x"55", x"55", x"55"
@@ -31,7 +34,7 @@ architecture sim of tb_framehandler_switch_2 is
   constant SFD_BYTE : std_logic_vector(7 downto 0) := x"D5";
 
   constant FRAME_OK : byte_array_t(0 to 63) := (
-    x"01", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
+    x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"78", x"90", x"08", x"00", x"45", x"00",
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
     x"05", x"40", x"C0", x"A8", x"00", x"2C", x"C0", x"A8",
@@ -43,7 +46,7 @@ architecture sim of tb_framehandler_switch_2 is
   );
 
   constant FRAME_BAD : byte_array_t(0 to 63) := (
-    x"02", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
+    x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"79", x"90", x"08", x"00", x"45", x"00",
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
     x"05", x"40", x"C0", x"A8", x"00", x"2C", x"C0", x"A8",
@@ -123,121 +126,80 @@ begin
     end loop;
   end process;
 
-  stim : process
+  monitor : process(clk)
   begin
-    reset <= '1';
+    if rising_edge(clk) then
+      for p in tx_ctrl'range loop
+        if tx_ctrl(p) = '1' then
+          tx_byte_count(p) <= tx_byte_count(p) + 1;
+        end if;
+      end loop;
+    end if;
+  end process;
+
+  stim : process
+    variable port_sel : std_logic_vector(3 downto 0);
+  begin
+    reset <= '0';
     rx_data <= (others => '0');
     rx_ctrl <= (others => '0');
     dest_port_in <= (others => '0');
     dest_port_in_flag <= '0';
     wait for 4 * CLK_PERIOD;
     wait until rising_edge(clk);
-    reset <= '0';
+    reset <= '1';
     wait until rising_edge(clk);
 
-    -- 4 frames to output 0 (one-hot)
-    for i in 0 to 3 loop
-      transmit_frame_with_port_change(
-        clk,
-        rx_data(7 downto 0),
-        rx_ctrl(0),
-        dest_port_in,
-        dest_port_in_flag,
-        FRAME_OK,
-        "0001",
-        "FRAME_OK with dest port 0 (one-hot)"
-      );
+    -- Alternating OK/BAD frames with rotating output ports
+    for i in 0 to 7 loop
+      case (i mod 4) is
+        when 0 => port_sel := "0001";
+        when 1 => port_sel := "0010";
+        when 2 => port_sel := "0100";
+        when others => port_sel := "1000";
+      end case;
+
+      if (i mod 2) = 0 then
+        transmit_frame_with_port_change(
+          clk,
+          rx_data(7 downto 0),
+          rx_ctrl(0),
+          dest_port_in,
+          dest_port_in_flag,
+          FRAME_OK,
+          port_sel,
+          "FRAME_OK alternating"
+        );
+      else
+        transmit_frame_with_port_change(
+          clk,
+          rx_data(7 downto 0),
+          rx_ctrl(0),
+          dest_port_in,
+          dest_port_in_flag,
+          FRAME_BAD,
+          port_sel,
+          "FRAME_BAD alternating"
+        );
+      end if;
+
       wait for 6 * CLK_PERIOD;
     end loop;
-
-    -- 2 frames to all outputs (flood)
-    for round in 0 to 1 loop
-      transmit_frame_with_port_change(
-        clk,
-        rx_data(7 downto 0),
-        rx_ctrl(0),
-        dest_port_in,
-        dest_port_in_flag,
-        FRAME_BAD,
-        "1111",
-        "FRAME_BAD with dest port flood"
-      );
-      wait for 6 * CLK_PERIOD;
-    end loop;
-
-    -- 6 frames to different outputs
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_OK,
-      "0010",
-      "FRAME_OK with dest port 1 (one-hot)"
-    );
-    wait for 6 * CLK_PERIOD;
-
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_OK,
-      "1000",
-      "FRAME_OK with dest port 3 (one-hot)"
-    );
-    wait for 6 * CLK_PERIOD;
-
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_BAD,
-      "0100",
-      "FRAME_BAD with dest port 2 (one-hot)"
-    );
-    wait for 6 * CLK_PERIOD;
-
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_OK,
-      "0001",
-      "FRAME_OK with dest port 0 (one-hot)"
-    );
-    wait for 6 * CLK_PERIOD;
-
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_BAD,
-      "0010",
-      "FRAME_BAD with dest port 1 (one-hot)"
-    );
-    wait for 6 * CLK_PERIOD;
-
-    transmit_frame_with_port_change(
-      clk,
-      rx_data(7 downto 0),
-      rx_ctrl(0),
-      dest_port_in,
-      dest_port_in_flag,
-      FRAME_OK,
-      "0100",
-      "FRAME_OK with dest port 2 (one-hot)"
-    );
 
     wait for 140 * CLK_PERIOD;
+    assert tx_byte_count(0) > 0
+      report "Expected accepted FRAME_OK traffic on TX port 0"
+      severity error;
+    assert tx_byte_count(1) = 0
+      report "Expected FRAME_BAD traffic for TX port 1 to be dropped"
+      severity error;
+    assert tx_byte_count(2) > 0
+      report "Expected accepted FRAME_OK traffic on TX port 2"
+      severity error;
+    assert tx_byte_count(3) = 0
+      report "Expected FRAME_BAD traffic for TX port 3 to be dropped"
+      severity error;
+
     report "framehandler_switch testbench finished." severity note;
     stop;
   end process;

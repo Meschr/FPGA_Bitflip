@@ -30,6 +30,7 @@ ARCHITECTURE tb OF tb_new_frame_handler IS
     SIGNAL dst_port : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL crc_valid : STD_LOGIC;
     SIGNAL eof_handler : STD_LOGIC;
+    SIGNAL fcs_error : STD_LOGIC;
     SIGNAL frame_rdy_handler : STD_LOGIC;
     SIGNAL full_buffer : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
@@ -98,7 +99,8 @@ BEGIN
             data_out => data_out,
             dst_port => dst_port,
             crc_valid => crc_valid,
-            eof_handler => eof_handler
+            eof_handler => eof_handler,
+            fcs_error => fcs_error
         );
 
     -- ===================================================================

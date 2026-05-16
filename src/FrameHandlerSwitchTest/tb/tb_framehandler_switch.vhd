@@ -123,6 +123,15 @@ begin
     end loop;
   end process;
 
+  monitor : process(clk)
+  begin
+    if rising_edge(clk) then
+      if tx_ctrl(0) = '1' then
+        report "TX0 byte=0x" & to_hstring(tx_data(7 downto 0)) severity note;
+      end if;
+    end if;
+  end process;
+
   stim : process
   begin
     reset <= '1';
@@ -157,6 +166,32 @@ begin
       FRAME_BAD,
       "0010",
       "FRAME_BAD with dest port 2"
+    );
+
+    wait for 6 * CLK_PERIOD;
+
+    transmit_frame_with_port_change(
+      clk,
+      rx_data(7 downto 0),
+      rx_ctrl(0),
+      dest_port_in,
+      dest_port_in_flag,
+      FRAME_OK,
+      "0100",
+      "FRAME_OK with dest port 2"
+    );
+
+    wait for 6 * CLK_PERIOD;
+
+    transmit_frame_with_port_change(
+      clk,
+      rx_data(7 downto 0),
+      rx_ctrl(0),
+      dest_port_in,
+      dest_port_in_flag,
+      FRAME_BAD,
+      "1000",
+      "FRAME_BAD with dest port 3"
     );
 
     wait for 140 * CLK_PERIOD;

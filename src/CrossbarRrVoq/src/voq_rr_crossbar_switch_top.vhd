@@ -77,19 +77,23 @@ ENTITY voq_rr_crossbar_switch_top IS
         wr_en_in0 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
         wr_data_in0 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
         wr_eof_in0 : IN STD_LOGIC; -- '1' beim letzten Byte des Frames
+        wr_abort_in0 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 0
         -- Eingang 1: Frames von Port 1 fuer jeden der 4 Ausgaenge
         wr_en_in1 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
         wr_data_in1 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
         wr_eof_in1 : IN STD_LOGIC;
+        wr_abort_in1 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 1
         -- Eingang 2: Frames von Port 2 fuer jeden der 4 Ausgaenge
         wr_en_in2 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
         wr_data_in2 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
         wr_eof_in2 : IN STD_LOGIC;
+        wr_abort_in2 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 2
 
         -- Eingang 3: Frames von Port 3 fuer jeden der 4 Ausgaenge
         wr_en_in3 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
         wr_data_in3 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
         wr_eof_in3 : IN STD_LOGIC;
+        wr_abort_in3 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 3
         -- =====================================================================
         -- Ausgangsseite: Nutzdaten und Valid-Flag je Ausgangsport
         -- =====================================================================
@@ -220,18 +224,22 @@ BEGIN
             wr_data_in0 => wr_data_in0,
             wr_en_in0 => wr_en_in0(0),
             wr_eof_in0 => wr_eof_in0,
+            wr_abort_in0 => wr_abort_in0,
 
             wr_data_in1 => wr_data_in1,
             wr_en_in1 => wr_en_in1(0),
             wr_eof_in1 => wr_eof_in1,
+            wr_abort_in1 => wr_abort_in1,
 
             wr_data_in2 => wr_data_in2,
             wr_en_in2 => wr_en_in2(0),
             wr_eof_in2 => wr_eof_in2,
+            wr_abort_in2 => wr_abort_in2,
 
             wr_data_in3 => wr_data_in3,
             wr_en_in3 => wr_en_in3(0),
             wr_eof_in3 => wr_eof_in3,
+            wr_abort_in3 => wr_abort_in3,
 
             -- One-Hot Lesefreigabe: kommt vom RR-Arbiter (via rd_en_o0)
             rd_en => rd_en_o0,
@@ -289,18 +297,22 @@ BEGIN
             wr_data_in0 => wr_data_in0,
             wr_en_in0 => wr_en_in0(1),
             wr_eof_in0 => wr_eof_in0,
+            wr_abort_in0 => wr_abort_in0,
 
             wr_data_in1 => wr_data_in1,
             wr_en_in1 => wr_en_in1(1),
             wr_eof_in1 => wr_eof_in1,
+            wr_abort_in1 => wr_abort_in1,
 
             wr_data_in2 => wr_data_in2,
             wr_en_in2 => wr_en_in2(1),
             wr_eof_in2 => wr_eof_in2,
+            wr_abort_in2 => wr_abort_in2,
 
             wr_data_in3 => wr_data_in3,
             wr_en_in3 => wr_en_in3(1),
             wr_eof_in3 => wr_eof_in3,
+            wr_abort_in3 => wr_abort_in3,
 
             rd_en => rd_en_o1,
 
@@ -350,18 +362,22 @@ BEGIN
             wr_data_in0 => wr_data_in0,
             wr_en_in0 => wr_en_in0(2),
             wr_eof_in0 => wr_eof_in0,
+            wr_abort_in0 => wr_abort_in0,
 
             wr_data_in1 => wr_data_in1,
             wr_en_in1 => wr_en_in1(2),
             wr_eof_in1 => wr_eof_in1,
+            wr_abort_in1 => wr_abort_in1,
 
             wr_data_in2 => wr_data_in2,
             wr_en_in2 => wr_en_in2(2),
             wr_eof_in2 => wr_eof_in2,
+            wr_abort_in2 => wr_abort_in2,
 
             wr_data_in3 => wr_data_in3,
             wr_en_in3 => wr_en_in3(2),
             wr_eof_in3 => wr_eof_in3,
+            wr_abort_in3 => wr_abort_in3,
 
             rd_en => rd_en_o2,
 
@@ -412,18 +428,22 @@ BEGIN
             wr_data_in0 => wr_data_in0,
             wr_en_in0 => wr_en_in0(3),
             wr_eof_in0 => wr_eof_in0,
+            wr_abort_in0 => wr_abort_in0,
 
             wr_data_in1 => wr_data_in1,
             wr_en_in1 => wr_en_in1(3),
             wr_eof_in1 => wr_eof_in1,
+            wr_abort_in1 => wr_abort_in1,
 
             wr_data_in2 => wr_data_in2,
             wr_en_in2 => wr_en_in2(3),
             wr_eof_in2 => wr_eof_in2,
+            wr_abort_in2 => wr_abort_in2,
 
             wr_data_in3 => wr_data_in3,
             wr_en_in3 => wr_en_in3(3),
             wr_eof_in3 => wr_eof_in3,
+            wr_abort_in3 => wr_abort_in3,
 
             rd_en => rd_en_o3,
 

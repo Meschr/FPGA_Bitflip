@@ -30,6 +30,7 @@ architecture rtl of switchcore is
 	signal src_mac0, src_mac1, src_mac2, src_mac3                         : STD_LOGIC_VECTOR(47 downto 0);
 	signal src_valid0, src_valid1, src_valid2, src_valid3                 : STD_LOGIC;
 	signal fcs_valid0, fcs_valid1, fcs_valid2, fcs_valid3                 : STD_LOGIC;
+	signal fcs_error0, fcs_error1, fcs_error2, fcs_error3                 : STD_LOGIC;
 
 begin
 
@@ -47,7 +48,8 @@ begin
 			dst_valid             => dst_req0,
 			src_mac               => src_mac0,
 			src_valid             => src_valid0,
-			crc_valid             => fcs_valid0
+			crc_valid             => fcs_valid0,
+			fcs_error             => fcs_error0
 		);
 
 	frame_handler_inst1 : entity work.frame_handler
@@ -64,7 +66,8 @@ begin
 			dst_valid             => dst_req1,
 			src_mac               => src_mac1,
 			src_valid             => src_valid1,
-			crc_valid             => fcs_valid1
+			crc_valid             => fcs_valid1,
+			fcs_error             => fcs_error1
 		);
 
 	frame_handler_inst2 : entity work.frame_handler
@@ -81,7 +84,8 @@ begin
 			dst_valid             => dst_req2,
 			src_mac               => src_mac2,
 			src_valid             => src_valid2,
-			crc_valid             => fcs_valid2
+			crc_valid             => fcs_valid2,
+			fcs_error             => fcs_error2
 		);
 
 	frame_handler_inst3 : entity work.frame_handler
@@ -98,7 +102,8 @@ begin
 			dst_valid             => dst_req3,
 			src_mac               => src_mac3,
 			src_valid             => src_valid3,
-			crc_valid             => fcs_valid3
+			crc_valid             => fcs_valid3,
+			fcs_error             => fcs_error3
 		);
 	mac_table_inst : entity work.mac_table
 		generic map(
@@ -150,22 +155,26 @@ begin
 			flush_out3 => (others => '0'),
 
 			-- input from frame_handler0
-			wr_en_in0   => dst0,
-			wr_data_in0 => handled_frame0,
-			wr_eof_in0  => eof_handler0,
+				wr_en_in0   => dst0,
+				wr_data_in0 => handled_frame0,
+				wr_eof_in0  => eof_handler0,
+				wr_abort_in0 => fcs_error0,
 
 			-- unused inputs tied off
-			wr_en_in1   => dst1,
-			wr_data_in1 => handled_frame1,
-			wr_eof_in1  => eof_handler1,
+				wr_en_in1   => dst1,
+				wr_data_in1 => handled_frame1,
+				wr_eof_in1  => eof_handler1,
+				wr_abort_in1 => fcs_error1,
 
-			wr_en_in2   => dst2,
-			wr_data_in2 => handled_frame2,
-			wr_eof_in2  => eof_handler2,
+				wr_en_in2   => dst2,
+				wr_data_in2 => handled_frame2,
+				wr_eof_in2  => eof_handler2,
+				wr_abort_in2 => fcs_error2,
 
-			wr_en_in3   => dst3,
-			wr_data_in3 => handled_frame3,
-			wr_eof_in3  => eof_handler3,
+				wr_en_in3   => dst3,
+				wr_data_in3 => handled_frame3,
+				wr_eof_in3  => eof_handler3,
+				wr_abort_in3 => fcs_error3,
 
 			out_data_0 => tx_data(7 downto 0),   -- Ausgabedaten Ausgang 0
 			out_data_1 => tx_data(15 downto 8),  -- Ausgabedaten Ausgang 1

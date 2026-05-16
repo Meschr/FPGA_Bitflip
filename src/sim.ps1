@@ -87,14 +87,9 @@ foreach ($file in $selectedSrc) {
 Write-Host "  OK!" -ForegroundColor Green
 
 # =====================================================================
-# Schritt 3: Alle tb_*.vhd Dateien suchen
+# Schritt 3: Alle tb_*.vhd Dateien rekursiv suchen
 # =====================================================================
-$tbFiles = Get-ChildItem -Path "tb" -Filter "tb_*.vhd" -ErrorAction SilentlyContinue
-
-if ($null -eq $tbFiles -or $tbFiles.Count -eq 0) {
-    # Falls kein tb/ Ordner: suche im aktuellen Ordner
-    $tbFiles = Get-ChildItem -Path "." -Filter "tb_*.vhd"
-}
+$tbFiles = Get-ChildItem -Path $PSScriptRoot -Recurse -Filter "tb_*.vhd" -ErrorAction SilentlyContinue
 
 if ($null -eq $tbFiles -or $tbFiles.Count -eq 0) {
     Write-Host "FEHLER: Keine Testbench-Dateien (tb_*.vhd) gefunden!" -ForegroundColor Red
@@ -105,7 +100,8 @@ if ($null -eq $tbFiles -or $tbFiles.Count -eq 0) {
 Write-Host ""
 Write-Host "Gefundene Testbenches:" -ForegroundColor Yellow
 for ($i = 0; $i -lt $tbFiles.Count; $i++) {
-    Write-Host "  [$($i+1)] $($tbFiles[$i].Name)" -ForegroundColor White
+    $relTbPath = $tbFiles[$i].FullName.Substring($PSScriptRoot.Length + 1)
+    Write-Host "  [$($i+1)] $relTbPath" -ForegroundColor White
 }
 Write-Host ""
 
