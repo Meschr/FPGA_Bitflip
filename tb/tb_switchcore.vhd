@@ -159,11 +159,11 @@ architecture rtl of tb_switchcore is
                 frame_len := frame_len + 1;
 
             elsif capturing then
-                if frame_len >= 20 then
-                    src_mac := frame_mac_string(frame, 14);
-                    dst_mac := frame_mac_string(frame, 8);
+                if frame_len >= 12 then
+                    src_mac := frame_mac_string(frame, 6);
+                    dst_mac := frame_mac_string(frame, 0);
                     fcs := frame_fcs_string(frame, frame_len);
-                    report port_label & " receive message; src_mac: " & src_mac & "; dst_mac: " & dst_mac & "; fcs: " & fcs severity note;
+                    report port_label & " receive message; dst_mac: " & dst_mac & "; src_mac: " & src_mac & "; fcs: " & fcs severity note;
                 end if;
 
                 capturing := false;
@@ -244,7 +244,7 @@ begin
                 dst_mac := frame_mac_string(frame, 8);
                 src_mac := frame_mac_string(frame, 14);
                 fcs := frame_fcs_string(frame, frame_len);
-                report "Port 0 sending message; src_mac: " & src_mac & "; dst_mac: " & dst_mac & "; fcs: " & fcs severity note;
+                report "Port 0 sending message; dst_mac: " & dst_mac & "; src_mac: " & src_mac & "; fcs: " & fcs severity note;
 
                 send_frame(clk, rx_data(7 downto 0), rx_ctrl(0), frame, frame_len);
 
@@ -295,7 +295,7 @@ begin
                 dst_mac := frame_mac_string(frame, 8);
                 src_mac := frame_mac_string(frame, 14);
                 fcs := frame_fcs_string(frame, frame_len);
-                report "Port 1 sending message; src_mac: " & src_mac & "; dst_mac: " & dst_mac & "; fcs: " & fcs severity note;
+                report "Port 1 sending message; dst_mac: " & dst_mac & "; src_mac: " & src_mac & "; fcs: " & fcs severity note;
 
                 send_frame(clk, rx_data(15 downto 8), rx_ctrl(1), frame, frame_len);
 
@@ -346,7 +346,7 @@ begin
                 dst_mac := frame_mac_string(frame, 8);
                 src_mac := frame_mac_string(frame, 14);
                 fcs := frame_fcs_string(frame, frame_len);
-                report "Port 2 sending message; src_mac: " & src_mac & "; dst_mac: " & dst_mac & "; fcs: " & fcs severity note;
+                report "Port 2 sending message; dst_mac: " & dst_mac & "; src_mac: " & src_mac & "; fcs: " & fcs severity note;
 
                 send_frame(clk, rx_data(23 downto 16), rx_ctrl(2), frame, frame_len);
 
@@ -397,7 +397,7 @@ begin
                 dst_mac := frame_mac_string(frame, 8);
                 src_mac := frame_mac_string(frame, 14);
                 fcs := frame_fcs_string(frame, frame_len);
-                report "Port 3 sending message; src_mac: " & src_mac & "; dst_mac: " & dst_mac & "; fcs: " & fcs severity note;
+                report "Port 3 sending message; dst_mac: " & dst_mac & "; src_mac: " & src_mac & "; fcs: " & fcs severity note;
 
                 send_frame(clk, rx_data(31 downto 24), rx_ctrl(3), frame, frame_len);
 

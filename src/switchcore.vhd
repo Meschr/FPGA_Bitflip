@@ -30,6 +30,7 @@ architecture rtl of switchcore is
 	signal src_mac0, src_mac1, src_mac2, src_mac3                         : STD_LOGIC_VECTOR(47 downto 0);
 	signal src_valid0, src_valid1, src_valid2, src_valid3                 : STD_LOGIC;
 	signal fcs_valid0, fcs_valid1, fcs_valid2, fcs_valid3                 : STD_LOGIC;
+	signal dst_port0, dst_port1, dst_port2, dst_port3                     : STD_LOGIC_VECTOR(3 downto 0);
 
 begin
 
@@ -47,7 +48,8 @@ begin
 			dst_valid             => dst_req0,
 			src_mac               => src_mac0,
 			src_valid             => src_valid0,
-			crc_valid             => fcs_valid0
+			crc_valid             => fcs_valid0,
+			dst_port              => dst_port0
 		);
 
 	frame_handler_inst1 : entity work.frame_handler
@@ -64,7 +66,8 @@ begin
 			dst_valid             => dst_req1,
 			src_mac               => src_mac1,
 			src_valid             => src_valid1,
-			crc_valid             => fcs_valid1
+			crc_valid             => fcs_valid1,
+			dst_port              => dst_port1
 		);
 
 	frame_handler_inst2 : entity work.frame_handler
@@ -81,7 +84,8 @@ begin
 			dst_valid             => dst_req2,
 			src_mac               => src_mac2,
 			src_valid             => src_valid2,
-			crc_valid             => fcs_valid2
+			crc_valid             => fcs_valid2,
+			dst_port              => dst_port2
 		);
 
 	frame_handler_inst3 : entity work.frame_handler
@@ -98,8 +102,10 @@ begin
 			dst_valid             => dst_req3,
 			src_mac               => src_mac3,
 			src_valid             => src_valid3,
-			crc_valid             => fcs_valid3
+			crc_valid             => fcs_valid3,
+			dst_port              => dst_port3
 		);
+
 	mac_table_inst : entity work.mac_table
 		generic map(
 			ADDR_WIDTH => 14,
@@ -149,21 +155,19 @@ begin
 			flush_out2 => (others => '0'),
 			flush_out3 => (others => '0'),
 
-			-- input from frame_handler0
-			wr_en_in0   => dst0,
+			wr_en_in0   => dst_port0,
 			wr_data_in0 => handled_frame0,
 			wr_eof_in0  => eof_handler0,
 
-			-- unused inputs tied off
-			wr_en_in1   => dst1,
+			wr_en_in1   => dst_port1,
 			wr_data_in1 => handled_frame1,
 			wr_eof_in1  => eof_handler1,
 
-			wr_en_in2   => dst2,
+			wr_en_in2   => dst_port2,
 			wr_data_in2 => handled_frame2,
 			wr_eof_in2  => eof_handler2,
 
-			wr_en_in3   => dst3,
+			wr_en_in3   => dst_port3,
 			wr_data_in3 => handled_frame3,
 			wr_eof_in3  => eof_handler3,
 

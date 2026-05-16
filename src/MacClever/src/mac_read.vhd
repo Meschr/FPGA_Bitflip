@@ -47,12 +47,16 @@ entity mac_read is
         -- Ausgaben
         dest0  : out std_logic_vector(3 downto 0);
         valid0 : out std_logic;
+        ack0   : out std_logic; 
         dest1  : out std_logic_vector(3 downto 0);
         valid1 : out std_logic;
+        ack1   : out std_logic;
         dest2  : out std_logic_vector(3 downto 0);
         valid2 : out std_logic;
+        ack2   : out std_logic;
         dest3  : out std_logic_vector(3 downto 0);
         valid3 : out std_logic;
+        ack3   : out std_logic;
 
         -- Service (bram interfacing)
         rdata  : in  std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -84,7 +88,9 @@ architecture rtl of mac_read is
     signal dest0_next, dest1_next, dest2_next, dest3_next : STD_LOGIC_VECTOR(3 downto 0);
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : std_logic := '0';
     signal valid0_next, valid1_next, valid2_next, valid3_next : std_logic;
-
+    signal ack0_reg, ack1_reg, ack2_reg, ack3_reg : std_logic;
+    signal ack0_next, ack1_next, ack2_next, ack3_next : std_logic;
+    
 begin
 
     -- Round robin combinational: decide which port to read next
@@ -104,6 +110,10 @@ begin
         valid1_next <= valid1_reg;
         valid2_next <= valid2_reg;
         valid3_next <= valid3_reg;
+        ack0_next <= '0';
+        ack1_next <= '0';
+        ack2_next <= '0';
+        ack3_next <= '0';
 
         case state is
             when ZERO =>
@@ -117,6 +127,7 @@ begin
             when ZERO_WAIT =>
                 -- read data available this cycle
                 state_next <= ZERO_OUT;
+                ack0_next <= '1';
             when ZERO_OUT =>
                 state_next <= ONE;
                 valid0_next <= '1';
@@ -125,7 +136,6 @@ begin
                 else
                     dest0_next <= to_onehot(rdata(1 downto 0));
                 end if;
-                
             when ONE =>
                 state_next <= TWO;
                 if req1 = '1' then
@@ -135,6 +145,7 @@ begin
                 end if;
             when ONE_WAIT =>
                 state_next <= ONE_OUT;
+                ack1_next <= '1';
             when ONE_OUT =>
                 state_next <= TWO;
                 valid1_next <= '1';
@@ -152,6 +163,7 @@ begin
                 end if;
             when TWO_WAIT =>
                 state_next <= TWO_OUT;
+                ack2_next <= '1';
             when TWO_OUT =>
                 state_next <= THREE;
                 valid2_next <= '1';
@@ -169,6 +181,7 @@ begin
                 end if;
             when THREE_WAIT =>
                 state_next <= THREE_OUT;
+                ack3_next <= '1';
             when THREE_OUT =>
                 state_next <= ZERO;
                 valid3_next <= '1';
@@ -181,7 +194,9 @@ begin
     end process round_robin_comb;
 
     -- sequential: register state and BRAM control outputs
-    round_robin_seq : process(clk, rst)
+    round_robin_seq : process(clk, rst, state, raddr_next, ren_next, dest0_next, dest1_next, dest2_next, dest3_next,
+                               valid0_next, valid1_next, valid2_next, valid3_next,
+                               ack0_next, ack1_next, ack2_next, ack3_next)
     begin
         if rst = '0' then
             state <= ZERO;
@@ -195,6 +210,11 @@ begin
             valid1_reg <= '0';
             valid2_reg <= '0';
             valid3_reg <= '0';
+            ack0_reg <= '0';
+            ack1_reg <= '0';
+            ack2_reg <= '0';
+            ack3_reg <= '0';
+
         elsif rising_edge(clk) then
             state <= state_next;
             raddr <= raddr_next;
@@ -207,6 +227,10 @@ begin
             valid1_reg <= valid1_next;
             valid2_reg <= valid2_next;
             valid3_reg <= valid3_next;
+            ack0_reg <= ack0_next;
+            ack1_reg <= ack1_next;
+            ack2_reg <= ack2_next;
+            ack3_reg <= ack3_next;
         end if;
     end process round_robin_seq;
 
@@ -221,4 +245,9 @@ begin
     valid2 <= valid2_reg;
     valid3 <= valid3_reg;
 
+    ack0 <= ack0_reg;
+    ack1 <= ack1_reg;
+    ack2 <= ack2_reg;
+    ack3 <= ack3_reg;
+    
 end rtl;
