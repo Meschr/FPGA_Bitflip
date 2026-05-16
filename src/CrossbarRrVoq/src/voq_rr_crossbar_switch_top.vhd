@@ -102,56 +102,8 @@ ENTITY voq_rr_crossbar_switch_top IS
         out_valid_0 : OUT STD_LOGIC;
         out_valid_1 : OUT STD_LOGIC;
         out_valid_2 : OUT STD_LOGIC;
-        out_valid_3 : OUT STD_LOGIC;
-        -- =====================================================================
-        -- Debug-Ausgaenge: RR-Zustand je Ausgangsport
-        -- =====================================================================
+        out_valid_3 : OUT STD_LOGIC
 
-        -- Aktuell selektierter FIFO-Index (0..3) im Round-Robin
-        rr_sel_0 : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-        rr_sel_1 : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-        rr_sel_2 : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-        rr_sel_3 : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-
-        -- One-Hot Grant: welcher FIFO gerade lesen darf (Bit i = FIFO i)
-        rr_grant_0 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rr_grant_1 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rr_grant_2 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rr_grant_3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-
-        -- '1': RR-Arbiter ist aktiv (bedient gerade einen Frame)
-        rr_active_0 : OUT STD_LOGIC;
-        rr_active_1 : OUT STD_LOGIC;
-        rr_active_2 : OUT STD_LOGIC;
-        rr_active_3 : OUT STD_LOGIC;
-        -- =====================================================================
-        -- Debug-Ausgaenge: FIFO-Statussignale je Ausgangsqueue
-        -- Alle als 4-Bit-Vektoren, Bit i entspricht dem FIFO von Eingang i.
-        -- =====================================================================
-
-        -- '1': FIFO haelt mindestens einen vollstaendigen Frame bereit (EOF gesehen)
-        frame_rdy_dbg_0 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        frame_rdy_dbg_1 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        frame_rdy_dbg_2 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        frame_rdy_dbg_3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-
-        -- '1': Das aktuell gelesene Byte ist das letzte Byte eines Frames (EOF)
-        rd_eof_dbg_0 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rd_eof_dbg_1 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rd_eof_dbg_2 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        rd_eof_dbg_3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-
-        -- '1': FIFO ist voll, neue Schreibzugriffe werden verworfen
-        full_dbg_0 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        full_dbg_1 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        full_dbg_2 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        full_dbg_3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-
-        -- '1': FIFO ist leer, Lesedaten sind nicht gueltig
-        empty_dbg_0 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        empty_dbg_1 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        empty_dbg_2 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        empty_dbg_3 : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
     );
 END ENTITY;
 
@@ -563,51 +515,5 @@ BEGIN
             out_data_2 => out_data_2,
             out_data_3 => out_data_3
         );
-
-    ---------------------------------------------------------------------------
-    -- Debug-Ausgaenge: interne Signale nach aussen durchschleifen
-    -- Alle Zuweisungen sind reine Leitungsverbindungen (keine Logik).
-    ---------------------------------------------------------------------------
-
-    -- RR-Selektions-Index und Grant-Vektoren (fuer Beobachtung der Arbitrierung)
-    rr_sel_0 <= rr_sel_o0;
-    rr_sel_1 <= rr_sel_o1;
-    rr_sel_2 <= rr_sel_o2;
-    rr_sel_3 <= rr_sel_o3;
-
-    rr_grant_0 <= rr_grant_o0;
-    rr_grant_1 <= rr_grant_o1;
-    rr_grant_2 <= rr_grant_o2;
-    rr_grant_3 <= rr_grant_o3;
-
-    -- Active-Flag: zeigt an ob der RR gerade einen Frame durchleitet
-    rr_active_0 <= rr_active_o0;
-    rr_active_1 <= rr_active_o1;
-    rr_active_2 <= rr_active_o2;
-    rr_active_3 <= rr_active_o3;
-
-    -- FIFO-Bereitschaft: mind. ein vollstaendiger Frame im jeweiligen FIFO
-    frame_rdy_dbg_0 <= frame_rdy_o0;
-    frame_rdy_dbg_1 <= frame_rdy_o1;
-    frame_rdy_dbg_2 <= frame_rdy_o2;
-    frame_rdy_dbg_3 <= frame_rdy_o3;
-
-    -- EOF beim aktuellen Lesebyte je FIFO
-    rd_eof_dbg_0 <= rd_eof_o0;
-    rd_eof_dbg_1 <= rd_eof_o1;
-    rd_eof_dbg_2 <= rd_eof_o2;
-    rd_eof_dbg_3 <= rd_eof_o3;
-
-    -- FIFO voll (Schreibseite: Ueberlauf-Warnung)
-    full_dbg_0 <= full_o0;
-    full_dbg_1 <= full_o1;
-    full_dbg_2 <= full_o2;
-    full_dbg_3 <= full_o3;
-
-    -- FIFO leer (Leseseite: keine gueltigen Daten verfuegbar)
-    empty_dbg_0 <= empty_o0;
-    empty_dbg_1 <= empty_o1;
-    empty_dbg_2 <= empty_o2;
-    empty_dbg_3 <= empty_o3;
 
 END ARCHITECTURE rtl;

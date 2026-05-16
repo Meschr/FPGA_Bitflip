@@ -148,51 +148,61 @@ def corrupt(wire: list[int]) -> list[int]:
 
 
 # ---------------------------------------------------------------------------
-# Generate stimulus
+# Generate stimulus for 4 ports
 # ---------------------------------------------------------------------------
-def generate(n_valid: int = 4, n_corrupt: int = 1, out: str = None):
+def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outdir: str = None):
     if not verify_lookup_table():
         raise RuntimeError("CRC table does not match reference — check table values")
 
-    if out is None:
-        out = os.path.join(os.path.dirname(__file__), "stimulus.txt")
+    if outdir is None:
+        outdir = os.path.dirname(__file__)
 
-    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
-    frames = []
+    os.makedirs(outdir, exist_ok=True)
 
-    for i in range(n_valid):
-        dst     = random_mac()
-        src     = random_mac()
-        length  = random.randint(46, 200)
-        payload = os.urandom(length)
-        wire    = build_frame(dst, src, payload)
-        frames.append({
-            "comment": f"Valid frame {i+1}: dst={dst} src={src} payload={length}B",
-            "wire":    wire,
-            "corrupt": False,
-        })
+    # Generate frames for each port
+    for port in range(4):
+        frames = []
+        frame_counter = 1
 
-    for i in range(n_corrupt):
-        dst     = random_mac()
-        src     = random_mac()
-        payload = os.urandom(random.randint(46, 200))
-        wire    = corrupt(build_frame(dst, src, payload))
-        frames.append({
-            "comment": f"Corrupt FCS frame {i+1}: dst={dst} src={src}",
-            "wire":    wire,
-            "corrupt": True,
-        })
+        # Valid frames for this port
+        for i in range(n_valid_per_port):
+            dst     = random_mac()
+            src     = random_mac()
+            length  = random.randint(46, 200)
+            payload = os.urandom(length)
+            wire    = build_frame(dst, src, payload)
+            frames.append({
+                "comment": f"Valid frame {frame_counter}: dst={dst} src={src} payload={length}B",
+                "wire":    wire,
+                "corrupt": False,
+            })
+            frame_counter += 1
 
-    with open(out, "w") as f:
+        # Corrupt frames for this port
+        for i in range(n_corrupt_per_port):
+            dst     = random_mac()
+            src     = random_mac()
+            payload = os.urandom(random.randint(46, 200))
+            wire    = corrupt(build_frame(dst, src, payload))
+            frames.append({
+                "comment": f"Corrupt FCS frame {i+1}: dst={dst} src={src}",
+                "wire":    wire,
+                "corrupt": True,
+            })
+            frame_counter += 1
+
+        # Write to port-specific file
+        outfile = os.path.join(outdir, f"stimulus_port{port}.txt")
+        with open(outfile, "w") as f:
+            for fr in frames:
+                f.write(f"# {fr['comment']}\n")
+                f.write(" ".join(f"{b:02X}" for b in fr["wire"]) + "\n\n")
+
+        print(f"Port {port}: Written {len(frames)} frames to {outfile}")
         for fr in frames:
-            f.write(f"# {fr['comment']}\n")
-            f.write(" ".join(f"{b:02X}" for b in fr["wire"]) + "\n\n")
-
-    print(f"Written {len(frames)} frames to {out}")
-    for fr in frames:
-        status = "CORRUPT" if fr["corrupt"] else "valid  "
-        print(f"  [{status}] {fr['comment']}")
+            status = "CORRUPT" if fr["corrupt"] else "valid  "
+            print(f"  [{status}] {fr['comment']}")
 
 
 if __name__ == "__main__":
-    generate(n_valid=40, n_corrupt=10)
+    generate_4ports(n_valid_per_port=10, n_corrupt_per_port=2)
