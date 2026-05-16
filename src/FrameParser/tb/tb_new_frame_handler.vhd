@@ -98,9 +98,7 @@ BEGIN
             data_out => data_out,
             dst_port => dst_port,
             crc_valid => crc_valid,
-            eof_handler => eof_handler,
-            frame_rdy => frame_rdy_handler,
-            full_buffer => full_buffer
+            eof_handler => eof_handler
         );
 
     -- ===================================================================
