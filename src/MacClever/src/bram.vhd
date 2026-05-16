@@ -31,7 +31,7 @@ architecture rtl of bram is
     signal q_b_reg : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 begin
 
-    process (clock)
+    process(all)
     begin
         if rising_edge(clock) then
             if wren_a = '1' then

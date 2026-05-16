@@ -150,7 +150,7 @@ def corrupt(wire: list[int]) -> list[int]:
 # ---------------------------------------------------------------------------
 # Generate stimulus for 4 ports
 # ---------------------------------------------------------------------------
-def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outdir: str = None):
+def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outdir: str = None, mac_lists: list | None = None):
     if not verify_lookup_table():
         raise RuntimeError("CRC table does not match reference — check table values")
 
@@ -159,50 +159,65 @@ def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outd
 
     os.makedirs(outdir, exist_ok=True)
 
-    # Generate frames for each port
-    for port in range(4):
+    # Default deterministic MAC lists (4 addresses per port) if not provided
+    if mac_lists is None:
+        mac_lists = [
+            ["02:00:00:00:00:01", "02:00:00:00:00:02", "02:00:00:00:00:03", "02:00:00:00:00:04"],
+            ["02:10:00:00:00:01", "02:10:00:00:00:02", "02:10:00:00:00:03", "02:10:00:00:00:04"],
+            ["02:20:00:00:00:01", "02:20:00:00:00:02", "02:20:00:00:00:03", "02:20:00:00:00:04"],
+            ["02:30:00:00:00:01", "02:30:00:00:00:02", "02:30:00:00:00:03", "02:30:00:00:00:04"],
+        ]
+
+    # Generate frames for each source port
+    for src_port in range(4):
         frames = []
         frame_counter = 1
+        valid_count = 0
 
-        # Valid frames for this port
-        for i in range(n_valid_per_port):
-            dst     = random_mac()
-            src     = random_mac()
-            length  = random.randint(46, 200)
+        # Generate exactly n_valid_per_port valid frames
+        while valid_count < n_valid_per_port:
+            dst_port = random.choice([p for p in range(4) if p != src_port])
+            src_mac = random.choice(mac_lists[src_port])
+            dst_mac = random.choice(mac_lists[dst_port])
+            
+            length = random.randint(46, 200)
             payload = os.urandom(length)
-            wire    = build_frame(dst, src, payload)
+            wire = build_frame(dst_mac, src_mac, payload)
             frames.append({
-                "comment": f"Valid frame {frame_counter}: dst={dst} src={src} payload={length}B",
-                "wire":    wire,
+                "comment": f"Port {src_port} -> Port {dst_port} frame {frame_counter}: dst={dst_mac} src={src_mac} payload={length}B",
+                "wire": wire,
                 "corrupt": False,
             })
+            valid_count += 1
             frame_counter += 1
 
-        # Corrupt frames for this port
+        # Then add corrupt frames
         for i in range(n_corrupt_per_port):
-            dst     = random_mac()
-            src     = random_mac()
+            s = random.choice(mac_lists[src_port])
+            # pick a destination port different from src_port
+            other_ports = [p for p in range(4) if p != src_port]
+            dp = random.choice(other_ports)
+            d = random.choice(mac_lists[dp])
             payload = os.urandom(random.randint(46, 200))
-            wire    = corrupt(build_frame(dst, src, payload))
+            wire = corrupt(build_frame(d, s, payload))
             frames.append({
-                "comment": f"Corrupt FCS frame {i+1}: dst={dst} src={src}",
-                "wire":    wire,
+                "comment": f"Corrupt FCS: Port {src_port} -> Port {dp}: dst={d} src={s}",
+                "wire": wire,
                 "corrupt": True,
             })
-            frame_counter += 1
 
         # Write to port-specific file
-        outfile = os.path.join(outdir, f"stimulus_port{port}.txt")
+        outfile = os.path.join(outdir, f"stimulus_port{src_port}.txt")
         with open(outfile, "w") as f:
             for fr in frames:
                 f.write(f"# {fr['comment']}\n")
                 f.write(" ".join(f"{b:02X}" for b in fr["wire"]) + "\n\n")
 
-        print(f"Port {port}: Written {len(frames)} frames to {outfile}")
+        print(f"Port {src_port}: Written {len(frames)} frames to {outfile}")
         for fr in frames:
             status = "CORRUPT" if fr["corrupt"] else "valid  "
             print(f"  [{status}] {fr['comment']}")
 
 
 if __name__ == "__main__":
-    generate_4ports(n_valid_per_port=10, n_corrupt_per_port=2)
+    generate_4ports(n_valid_per_port=4, n_corrupt_per_port=1)

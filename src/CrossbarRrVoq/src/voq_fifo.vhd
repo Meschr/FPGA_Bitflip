@@ -110,7 +110,7 @@ begin
     -- 1) Schreibport (kombinatorisch auf RAM)
     -- Schreibt Datenbyte und EOF-Flag gemeinsam auf die RAM-Adresse wr_ptr
     ---------------------------------------------------------------------------
-    write_proc : process (clk)
+    write_proc : process(all)
     begin
         if rising_edge(clk) then
             if can_write = '1' then
@@ -125,7 +125,7 @@ begin
     -- rd_reg wird mit Daten aus RAM gefuellt, wenn rd_en='1' und FIFO nicht leer
     -- rd_valid_reg merkt sich, ob rd_reg gueltige Daten enthaelt
     ---------------------------------------------------------------------------
-    read_proc : process (clk)
+    read_proc : process(all)
     begin
         if reset = '0' or flush = '1' then
             rd_reg <= (others => '0');
@@ -150,7 +150,7 @@ begin
     -- 3) Pointer, Belegungszaehler und Frame-Zaehler
     -- Verwalte Schreib-/Lese-Pointer, Belegungstiefe und komplette Frames
     ---------------------------------------------------------------------------
-    ptr_proc : process (clk)
+    ptr_proc : process(all)
         variable count_next : unsigned(count'range);
     begin
 

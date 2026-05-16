@@ -37,7 +37,7 @@ BEGIN
   ------------------------------------------------------------------
   -- Combinational CRC next-state (8 bits per cycle, MSB-first)
   ------------------------------------------------------------------
-  crc_comb : PROCESS (crc_reg, data_in, head_cnt, bit_valid)
+  crc_comb : process(all)
     VARIABLE c : STD_LOGIC_VECTOR(31 DOWNTO 0);
     VARIABLE feedback : STD_LOGIC;
     VARIABLE din_eff : STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -72,7 +72,7 @@ BEGIN
   ------------------------------------------------------------------
   -- Sequential control + registers
   ------------------------------------------------------------------
-  seq : PROCESS (clk, reset)
+  seq : process(all)
   BEGIN
     IF reset = '0' THEN
       crc_reg <= (OTHERS => '0');

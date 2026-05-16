@@ -220,7 +220,7 @@ BEGIN
     ---------------------------------------------------------------------------
     -- Monitor: loggt jedes Lesebyte, wenn rd_dest_port_en /= 0
     ---------------------------------------------------------------------------
-    monitor : PROCESS (clk)
+    monitor : process(all)
     BEGIN
         IF rising_edge(clk) THEN
             IF rd_dest_port_en /= "0000" THEN
