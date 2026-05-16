@@ -6,7 +6,7 @@
 # Main work library - contains all design sources
 defaultlib.files = [
   'src/switchcore.vhd',
-  'src/framehandler_switch.vhd',
+  'tb/tb_*.vhd',
   'src/CrossbarRrVoq/src/**/*.vhd',
   'src/FrameParser/src/**/*.vhd',
   'src/MacClever/src/**/*.vhd',

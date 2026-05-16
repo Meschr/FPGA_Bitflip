@@ -44,7 +44,7 @@ begin
 			eof_handler           => eof_handler0,
 			data_out              => handled_frame0,
 			dst_mac               => dst_mac0,
-			dst_valid             => dst_valid0,
+			dst_valid             => dst_req0,
 			src_mac               => src_mac0,
 			src_valid             => src_valid0,
 			crc_valid             => fcs_valid0
@@ -61,7 +61,7 @@ begin
 			eof_handler           => eof_handler1,
 			data_out              => handled_frame1,
 			dst_mac               => dst_mac1,
-			dst_valid             => dst_valid1,
+			dst_valid             => dst_req1,
 			src_mac               => src_mac1,
 			src_valid             => src_valid1,
 			crc_valid             => fcs_valid1
@@ -78,7 +78,7 @@ begin
 			eof_handler           => eof_handler2,
 			data_out              => handled_frame2,
 			dst_mac               => dst_mac2,
-			dst_valid             => dst_valid2,
+			dst_valid             => dst_req2,
 			src_mac               => src_mac2,
 			src_valid             => src_valid2,
 			crc_valid             => fcs_valid2
@@ -95,7 +95,7 @@ begin
 			eof_handler           => eof_handler3,
 			data_out              => handled_frame3,
 			dst_mac               => dst_mac3,
-			dst_valid             => dst_valid3,
+			dst_valid             => dst_req3,
 			src_mac               => src_mac3,
 			src_valid             => src_valid3,
 			crc_valid             => fcs_valid3
