@@ -137,8 +137,14 @@ BEGIN
 
           WHEN ERR =>
             eof <= '1';
-            state <= PREAMBLE;
+            data_out <= (OTHERS => '0');
             byte_cnt <= 0;
+
+            IF data_valid_prev = '1' AND data_valid = '0' THEN
+              state <= PREAMBLE;
+            ELSE
+              state <= ERR;
+            END IF;
 
         END CASE;
 
