@@ -5,7 +5,6 @@ USE ieee.numeric_std.ALL;
 ENTITY frame_handler IS
     PORT (
         clk : IN STD_LOGIC;
-
         reset : IN STD_LOGIC;
 
         -- inputs
