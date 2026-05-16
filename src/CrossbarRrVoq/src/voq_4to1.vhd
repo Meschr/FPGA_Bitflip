@@ -30,7 +30,7 @@ ENTITY voq_4to1 IS
     );
     PORT (
         clk : IN STD_LOGIC; -- Systemtakt
-        reset : IN STD_LOGIC; -- Synchroner Reset (aktiv high)
+        reset : IN STD_LOGIC; -- Synchroner Reset (aktiv low)
         flush : IN STD_LOGIC_VECTOR(3 DOWNTO 0);-- neue logische Leerung der jeweiligen FIFO (flush(i) = '1' leert FIFO i)
 
         -- -----------------------------------------------------------------

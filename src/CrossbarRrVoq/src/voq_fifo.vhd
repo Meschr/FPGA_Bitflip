@@ -122,10 +122,11 @@ begin
     ---------------------------------------------------------------------------
     read_proc : process (clk)
     begin
-        if rising_edge(clk) then
-            if reset = '1' or flush = '1' then
-                rd_reg <= (others => '0');
-            elsif can_read = '1' then
+        if reset = '0' or flush = '1' then
+            rd_reg <= (others => '0');
+
+        elsif rising_edge(clk) then
+            if can_read = '1' then
                 -- Lade Byte aus RAM: EOF-Flag + Datenbyte
                 rd_reg <= ram(to_integer(rd_ptr));
             end if;
@@ -147,52 +148,54 @@ begin
     ptr_proc : process (clk)
         variable count_next : unsigned(count'range);
     begin
+
+        if reset = '0' or flush = '1' then
+            -- Reset: Alle Pointer auf 0, FIFO ist leer
+            wr_ptr        <= (others => '0');
+            rd_ptr        <= (others => '0');
+            count         <= (others => '0');
+            frames_stored <= (others => '0');
+            rd_valid_reg  <= '0';
+        end if;
+
         if rising_edge(clk) then
-            if reset = '1' or flush = '1' then
-                -- Reset: Alle Pointer auf 0, FIFO ist leer
-                wr_ptr        <= (others => '0');
-                rd_ptr        <= (others => '0');
-                count         <= (others => '0');
-                frames_stored <= (others => '0');
-                rd_valid_reg  <= '0';
-            else
-                -- rd_valid_reg folgt can_read, wird aber nach EOF sofort deaktiviert
-                rd_valid_reg <= can_read and not (rd_reg(8) and rd_valid_reg);
+            -- rd_valid_reg folgt can_read, wird aber nach EOF sofort deaktiviert
+            rd_valid_reg <= can_read and not (rd_reg(8) and rd_valid_reg);
 
-                -- Pointer- und Belegungszaehler aktualisieren
-                -- Schreiben immer zaehlen, Lesen nur wenn nicht EOF
-                if can_write = '1' then
-                    wr_ptr <= wr_ptr + 1;
-                end if;
-
-                if can_read = '1' and rd_eof = '0' then
-                    rd_ptr <= rd_ptr + 1;
-                end if;
-
-                count_next := count;
-                if can_write = '1' then
-                    count_next := count_next + 1;
-                end if;
-                if can_read = '1' and rd_eof = '0' then
-                    count_next := count_next - 1;
-                end if;
-                count <= count_next;
-
-                -- Frame-Zaehler: Zaehle komplette Frames
-                -- Schreiben eines EOF-Bytes (wr_eof='1') erhoeht den Zaehler
-                -- Auslesen eines EOF-Bytes (rd_eof=rd_reg(8)='1') verringert den Zaehler
-                if (can_write = '1' and wr_eof = '1') and
-                    (rd_valid_reg = '1' and rd_reg(8) = '1') then
-                    -- Gleichzeitig: ein komplettes Frame rein, eines raus -> netto keine Aenderung
-                    null;
-                elsif (can_write = '1' and wr_eof = '1') then
-                    -- Nur Schreiben mit EOF: neues Frame fertig, Zaehler +1
-                    frames_stored <= frames_stored + 1;
-                elsif (rd_valid_reg = '1' and rd_reg(8) = '1') then
-                    -- Nur Lesen mit EOF: ein Frame verlasst das FIFO, Zaehler -1
-                    frames_stored <= frames_stored - 1;
-                end if;
+            -- Pointer- und Belegungszaehler aktualisieren
+            -- Schreiben immer zaehlen, Lesen nur wenn nicht EOF
+            if can_write = '1' then
+                wr_ptr <= wr_ptr + 1;
             end if;
+
+            if can_read = '1' and rd_eof = '0' then
+                rd_ptr <= rd_ptr + 1;
+            end if;
+
+            count_next := count;
+            if can_write = '1' then
+                count_next := count_next + 1;
+            end if;
+            if can_read = '1' and rd_eof = '0' then
+                count_next := count_next - 1;
+            end if;
+            count <= count_next;
+
+            -- Frame-Zaehler: Zaehle komplette Frames
+            -- Schreiben eines EOF-Bytes (wr_eof='1') erhoeht den Zaehler
+            -- Auslesen eines EOF-Bytes (rd_eof=rd_reg(8)='1') verringert den Zaehler
+            if (can_write = '1' and wr_eof = '1') and
+                (rd_valid_reg = '1' and rd_reg(8) = '1') then
+                -- Gleichzeitig: ein komplettes Frame rein, eines raus -> netto keine Aenderung
+                null;
+            elsif (can_write = '1' and wr_eof = '1') then
+                -- Nur Schreiben mit EOF: neues Frame fertig, Zaehler +1
+                frames_stored <= frames_stored + 1;
+            elsif (rd_valid_reg = '1' and rd_reg(8) = '1') then
+                -- Nur Lesen mit EOF: ein Frame verlasst das FIFO, Zaehler -1
+                frames_stored <= frames_stored - 1;
+            end if;
+
         end if;
     end process ptr_proc;
 
