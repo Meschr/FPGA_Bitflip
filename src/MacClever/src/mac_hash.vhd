@@ -32,7 +32,7 @@ architecture rtl of mac_hash is
     signal bit_counter : unsigned(5 downto 0);
 begin
 
-    process (clk, rst, en, ack, mac_in)
+    process(all)
         variable crc_next : STD_LOGIC_VECTOR(15 downto 0);
         variable feedback : STD_LOGIC;
     begin

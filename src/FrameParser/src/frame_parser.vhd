@@ -34,7 +34,7 @@ ARCHITECTURE rtl OF frame_parser IS
 
 BEGIN
 
-  PROCESS (clk, reset, byte_cnt, data_in)
+  process(all)
   BEGIN
     IF reset = '0' THEN
       state <= PREAMBLE;

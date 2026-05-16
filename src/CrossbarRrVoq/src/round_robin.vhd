@@ -47,7 +47,7 @@ architecture rtl of round_robin is
 begin
     -- -------------------------------------------------------------------------
     -- Register process. The reset is asynchronous and active low.
-    seq_proc : process (clk, reset)
+    seq_proc : process(all)
     begin
         if reset = '0' then
             state_reg  <= IDLE;
@@ -63,7 +63,7 @@ begin
     -- -------------------------------------------------------------------------
     -- Next-state logic. In IDLE, the search starts at rr_ptr_reg and checks all
     -- four FIFOs in round-robin order. In LOCKED, the grant is held until EOF.
-    comb_proc : process (state_reg, rr_ptr_reg, sel_reg, frame_rdy, eof)
+    comb_proc : process(all)
         variable found_v : boolean;
         variable index_v : integer range 0 to 3;
         variable cand_v  : unsigned(1 downto 0);
@@ -108,7 +108,7 @@ begin
 
     -- -------------------------------------------------------------------------
     -- Convert the selected index into one-hot read enable.
-    grant_proc : process (state_reg, sel_reg)
+    grant_proc : process(all)
     begin
         grant <= (others => '0');
 

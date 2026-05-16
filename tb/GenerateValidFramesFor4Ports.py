@@ -168,29 +168,30 @@ def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outd
             ["02:30:00:00:00:01", "02:30:00:00:00:02", "02:30:00:00:00:03", "02:30:00:00:00:04"],
         ]
 
-    # Generate frames for each source port. For every destination port (other than source)
-    # create frames for each src MAC in mac_lists[src_port] and each dst MAC in mac_lists[dst_port].
+    # Generate frames for each source port
     for src_port in range(4):
         frames = []
         frame_counter = 1
+        valid_count = 0
 
-        for dst_port in range(4):
-            if dst_port == src_port:
-                continue
+        # Generate exactly n_valid_per_port valid frames
+        while valid_count < n_valid_per_port:
+            dst_port = random.choice([p for p in range(4) if p != src_port])
+            src_mac = random.choice(mac_lists[src_port])
+            dst_mac = random.choice(mac_lists[dst_port])
+            
+            length = random.randint(46, 200)
+            payload = os.urandom(length)
+            wire = build_frame(dst_mac, src_mac, payload)
+            frames.append({
+                "comment": f"Port {src_port} -> Port {dst_port} frame {frame_counter}: dst={dst_mac} src={src_mac} payload={length}B",
+                "wire": wire,
+                "corrupt": False,
+            })
+            valid_count += 1
+            frame_counter += 1
 
-            for src_mac in mac_lists[src_port]:
-                for dst_mac in mac_lists[dst_port]:
-                    length = random.randint(46, 200)
-                    payload = os.urandom(length)
-                    wire = build_frame(dst_mac, src_mac, payload)
-                    frames.append({
-                        "comment": f"Port {src_port} -> Port {dst_port} frame {frame_counter}: dst={dst_mac} src={src_mac} payload={length}B",
-                        "wire": wire,
-                        "corrupt": False,
-                    })
-                    frame_counter += 1
-
-        # Optionally add a small number of corrupt frames per port (random dst/src from lists)
+        # Then add corrupt frames
         for i in range(n_corrupt_per_port):
             s = random.choice(mac_lists[src_port])
             # pick a destination port different from src_port
@@ -219,4 +220,4 @@ def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outd
 
 
 if __name__ == "__main__":
-    generate_4ports(n_valid_per_port=2, n_corrupt_per_port=2)
+    generate_4ports(n_valid_per_port=4, n_corrupt_per_port=1)

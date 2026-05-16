@@ -178,7 +178,7 @@ BEGIN
     ---------------------------------------------------------------------------
     -- Output Monitor: zeigt ausgehende Daten je Ausgang im Transcript
     ---------------------------------------------------------------------------
-    PROCESS (clk)
+    process(all)
     BEGIN
         IF rising_edge(clk) THEN
             IF out_valid_0 = '1' THEN

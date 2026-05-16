@@ -88,7 +88,7 @@ begin
     ack1 <= ack1_sig;
     ack2 <= ack2_sig;
     ack3 <= ack3_sig;
-    expiry_ratelimiter : process (clk, rst, forget_rate_limit)
+    expiry_ratelimiter : process(all)
     begin
         if rst = '0' then
             forget_rate_limit <= (others => '0');
@@ -102,7 +102,7 @@ begin
         end if;
     end process expiry_ratelimiter;
 
-    expiry_addr_counter : process (clk, rst, expiry_addr, ackcnt)
+    expiry_addr_counter : process(all)
     begin
         if rst = '0' then
             expiry_addr <= (others => '0');
@@ -115,7 +115,7 @@ begin
         end if;
     end process expiry_addr_counter;
 
-    round_robin_comb : process (round_robin, req0, req1, req2, req3, reqcnt_reg, valid0_reg, valid1_reg, valid2_reg, valid3_reg, addr0, addr1, addr2, addr3, expiry_addr, rdata)
+    round_robin_comb : process(all)
     begin
         round_robin_next <= ZERO;
         addr_next        <= (others => '0');
@@ -182,7 +182,7 @@ begin
         end case;
     end process round_robin_comb;
 
-    round_robin_seq : process (clk, rst)
+    round_robin_seq : process(all)
     begin
         if rst = '0' then
             round_robin <= ZERO;
@@ -199,7 +199,7 @@ begin
         end if;
     end process round_robin_seq;
 
-    buffers : process (clk, rst, valid0, valid1, valid2, valid3, reqcnt, ack0_sig, ack1_sig, ack2_sig, ack3_sig, ackcnt)
+    buffers : process(all)
     begin
         if rst = '0' then
             valid0_reg <= '0';
