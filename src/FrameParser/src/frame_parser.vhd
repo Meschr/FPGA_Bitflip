@@ -16,10 +16,10 @@ ENTITY frame_parser IS
     sof : OUT STD_LOGIC;                          -- Start-of-frame pulse
     eof : OUT STD_LOGIC;                          -- End-of-frame pulse end of payload --> fcs follows
 
-    dst_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);  -- Destination MAC address
-    dst_valid : OUT STD_LOGIC;                    -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
-    src_mac : OUT STD_LOGIC_VECTOR(47 DOWNTO 0);  -- Source MAC address
-    src_valid : OUT STD_LOGIC                     -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
+    dst_mac : INOUT STD_LOGIC_VECTOR(47 DOWNTO 0);  -- Destination MAC address
+    dst_valid : OUT STD_LOGIC;                      -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
+    src_mac : INOUT STD_LOGIC_VECTOR(47 DOWNTO 0);  -- Source MAC address
+    src_valid : OUT STD_LOGIC                       -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
   );
 END ENTITY frame_parser;
 
@@ -28,20 +28,16 @@ ARCHITECTURE rtl OF frame_parser IS
 
   SIGNAL state : state_t;                               -- State variable to track the current stage of frame parsing
 
-  SIGNAL dst_buf : STD_LOGIC_VECTOR(47 DOWNTO 0);       -- Buffer to hold the incoming bytes for the destination MAC address until fully received
-  SIGNAL src_buf : STD_LOGIC_VECTOR(47 DOWNTO 0);       -- Buffer to hold the incoming bytes for the source MAC address until fully received
   SIGNAL ether_byte_0 : STD_LOGIC_VECTOR(7 DOWNTO 0);   -- Temporary storage for first EtherType byte
   SIGNAL byte_cnt : INTEGER RANGE 0 TO 1500;            -- Shared byte counter (uses up to 6 during preamble detection)
   SIGNAL data_valid_prev : STD_LOGIC;                   -- Previous data_valid value for falling-edge detection
 
 BEGIN
 
-  PROCESS (clk, reset)
+  PROCESS (clk, reset, byte_cnt, data_in)
   BEGIN
     IF reset = '0' THEN
       state <= PREAMBLE;
-      dst_buf <= (OTHERS => '0');
-      src_buf <= (OTHERS => '0');
       ether_byte_0 <= (OTHERS => '0');
       byte_cnt <= 0;
       data_valid_prev <= '0';
@@ -61,8 +57,8 @@ BEGIN
       eof <= '0';
       dst_valid <= '0';
       src_valid <= '0';
-      dst_mac <= (others => '0');
-      src_mac <= (others => '0');
+      dst_mac <= dst_mac;
+      src_mac <= src_mac;
       data_valid_prev <= data_valid;
       byte_cnt <= 0;
 
@@ -97,18 +93,17 @@ BEGIN
             END IF;
 
             CASE byte_cnt IS
-              WHEN  8 => dst_buf(47 DOWNTO 40) <= data_in;
-              WHEN  9 => dst_buf(39 DOWNTO 32) <= data_in;
-              WHEN 10 => dst_buf(31 DOWNTO 24) <= data_in;
-              WHEN 11 => dst_buf(23 DOWNTO 16) <= data_in;
-              WHEN 12 => dst_buf(15 DOWNTO 8) <= data_in;
-              WHEN 13 => dst_buf(7 DOWNTO 0) <= data_in;
+              WHEN  8 => dst_mac(47 DOWNTO 40) <= data_in;
+              WHEN  9 => dst_mac(39 DOWNTO 32) <= data_in;
+              WHEN 10 => dst_mac(31 DOWNTO 24) <= data_in;
+              WHEN 11 => dst_mac(23 DOWNTO 16) <= data_in;
+              WHEN 12 => dst_mac(15 DOWNTO 8) <= data_in;
+              WHEN 13 => dst_mac(7 DOWNTO 0) <= data_in;
               WHEN OTHERS => NULL;
             END CASE;
 
             IF byte_cnt = 13 THEN
               dst_valid <= '1';
-              dst_mac <= dst_buf(47 DOWNTO 8) & data_in;
               state <= SRC;
             END IF;
 
@@ -116,18 +111,17 @@ BEGIN
             data_out <= data_in;
 
             CASE byte_cnt IS
-              WHEN 14 => src_buf(47 DOWNTO 40) <= data_in;
-              WHEN 15 => src_buf(39 DOWNTO 32) <= data_in;
-              WHEN 16 => src_buf(31 DOWNTO 24) <= data_in;
-              WHEN 17 => src_buf(23 DOWNTO 16) <= data_in;
-              WHEN 18 => src_buf(15 DOWNTO 8) <= data_in;
-              WHEN 19 => src_buf(7 DOWNTO 0) <= data_in;
+              WHEN 14 => src_mac(47 DOWNTO 40) <= data_in;
+              WHEN 15 => src_mac(39 DOWNTO 32) <= data_in;
+              WHEN 16 => src_mac(31 DOWNTO 24) <= data_in;
+              WHEN 17 => src_mac(23 DOWNTO 16) <= data_in;
+              WHEN 18 => src_mac(15 DOWNTO 8) <= data_in;
+              WHEN 19 => src_mac(7 DOWNTO 0) <= data_in;
               WHEN OTHERS => NULL;
             END CASE;
 
             IF byte_cnt = 19 THEN
             src_valid <= '1';
-            src_mac <= src_buf(47 DOWNTO 8) & data_in;
             state <= ETHER_PAYLOAD_FCS;
             END IF;
 
