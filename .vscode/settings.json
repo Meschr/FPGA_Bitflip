@@ -1,0 +1,6 @@
+{
+    "vhdl.formatter.case.keyword": "LowerCase",
+    "vhdl.formatter.insertFinalNewline": true,
+    "vhdl.formatter.align.port": true,
+    "vhdl.formatter.align.procedure": true
+}
