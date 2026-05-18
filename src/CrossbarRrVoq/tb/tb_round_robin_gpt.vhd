@@ -49,7 +49,7 @@ END ENTITY;
 ARCHITECTURE sim OF tb_round_robin_gpt IS
 
     SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '0';
+    SIGNAL reset : STD_LOGIC := '1';
     SIGNAL frame_rdy : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
     SIGNAL eof : STD_LOGIC := '0';
 
@@ -140,14 +140,14 @@ BEGIN
         BEGIN
             frame_rdy <= "0000";
             eof <= '0';
-            reset <= '1';
+            reset <= '0';
             WAIT UNTIL rising_edge(clk);
             WAIT FOR 1 ns;
             check_outputs("00", "0000", '0', "Reset cycle 1");
             WAIT UNTIL rising_edge(clk);
             WAIT FOR 1 ns;
             check_outputs("00", "0000", '0', "Reset cycle 2");
-            reset <= '0';
+            reset <= '1';
         END PROCEDURE;
 
         PROCEDURE release_and_check_idle(

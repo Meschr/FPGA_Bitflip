@@ -46,6 +46,17 @@ BEGIN
         );
 
     stim : PROCESS
+        PROCEDURE wait_gap IS
+        BEGIN
+            FOR i IN 1 TO 10 LOOP
+                WAIT FOR CLK_PERIOD;
+                WAIT FOR 1 ns;
+                ASSERT active = '0'
+                REPORT "GAP FAIL: active sollte 0 bleiben" SEVERITY error;
+                ASSERT grant = "0000"
+                REPORT "GAP FAIL: grant sollte 0000 bleiben" SEVERITY error;
+            END LOOP;
+        END PROCEDURE;
     BEGIN
         frame_rdy <= "0000";
         eof <= '0';
@@ -53,9 +64,9 @@ BEGIN
         -----------------------------------------------------------------------
         -- TEST 1: Reset
         -----------------------------------------------------------------------
-        reset <= '1';
-        WAIT FOR CLK_PERIOD * 3;
         reset <= '0';
+        WAIT FOR CLK_PERIOD * 3;
+        reset <= '1';
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
 
@@ -108,10 +119,11 @@ BEGIN
 
         ASSERT active = '0'
         REPORT "T3 FAIL: active sollte nach EOF 0 sein" SEVERITY error;
+        wait_gap;
         REPORT "TEST 3 PASSED: Frame-Lock hält";
 
         -----------------------------------------------------------------------
-        -- TEST 4: Nach EOF dreht Pointer weiter
+        -- TEST 4: Nach EOF + Gap dreht Pointer weiter
         -- Pointer war auf 0, Gewinner war 0, also jetzt ptr=1
         -- Bei frame_rdy="1111" sollte Eingang 1 gewählt werden
         -----------------------------------------------------------------------
@@ -130,6 +142,7 @@ BEGIN
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
         eof <= '0';
+        wait_gap;
 
         -----------------------------------------------------------------------
         -- TEST 5: Fairness ? bei dauerhafter Konkurrenz rotiert Gewinner
@@ -147,6 +160,7 @@ BEGIN
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
         eof <= '0';
+        wait_gap;
 
         -- Jetzt ptr=3, also Eingang 3
         frame_rdy <= "1111";
@@ -161,6 +175,7 @@ BEGIN
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
         eof <= '0';
+        wait_gap;
 
         -- Jetzt ptr=0, Wrap ? wieder Eingang 0
         frame_rdy <= "1111";
@@ -176,6 +191,7 @@ BEGIN
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
         eof <= '0';
+        wait_gap;
 
         -----------------------------------------------------------------------
         -- TEST 6: Kein frame_rdy ? bleibt IDLE
@@ -208,6 +224,7 @@ BEGIN
         WAIT FOR CLK_PERIOD;
         WAIT FOR 1 ns;
         eof <= '0';
+        wait_gap;
 
         -----------------------------------------------------------------------
         REPORT "ALLE TESTS ABGESCHLOSSEN";

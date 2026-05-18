@@ -1,17 +1,15 @@
 -- =============================================================================
--- Modul: voq_fifo
--- Beschreibung:
---   Generischer Store-and-Forward FIFO fuer die VOQ-Matrix eines Crossbar-Switch.
---   Speichert komplette Frames (erkannt durch EOF-Flag) und signalisiert,
---   wenn ein Frame fertig vorliegt (frame_rdy).
+-- Module: voq_fifo
+-- Purpose:
+--   Store-and-forward FIFO for VOQ use. Stores complete frames (EOF flagged)
+--   and asserts frame_rdy when at least one full frame is present.
 --
--- Speicher: DEPTH x 9 Bit (8 Bit Daten + 1 Bit EOF-Flag)
--- Dual-Port: Schreiben und Lesen gleichzeitig moeglich
--- frame_rdy: wird nur aktiv, wenn mindestens ein kompletter Frame gespeichert ist
+-- Memory:
+--   DEPTH x 9 bits (8-bit data + 1-bit EOF)
 --
--- Neue Signale (erweitert):
---   flush:    Logische Leerung des FIFOs (setzt alles auf Anfangswert)
---   rd_valid: '1' wenn rd_data und rd_eof gueltige Daten enthalten
+-- Extensions:
+--   flush    : logical clear of all pointers and counters
+--   rd_valid : indicates rd_data/rd_eof are valid for the current cycle
 -- =============================================================================
 
 library ieee;
@@ -20,42 +18,35 @@ use ieee.numeric_std.all;
 
 entity voq_fifo is
     generic (
-        DEPTH : INTEGER := 4096 -- Tiefe des FIFO-Speichers in Eintraegen (Bytes)
+        DEPTH : INTEGER := 4096 -- FIFO depth in bytes
     );
     port (
-        clk   : in STD_LOGIC; -- Systemtakt
-        reset : in STD_LOGIC; -- Synchroner Reset (aktiv high)
-        flush : in STD_LOGIC; -- Logische Leerung (aktiv high): setzt alle Pointer und Zaehler auf Anfangswert
+        clk   : in STD_LOGIC; -- System clock
+        reset : in STD_LOGIC; -- Synchronous reset (active low)
+        flush : in STD_LOGIC; -- Logical clear (active high)
 
-        -- -----------------------------------------------------------------
-        -- Schreibseite: Eingangsframe mit EOF-Markierung
-        -- -----------------------------------------------------------------
-        wr_en    : in STD_LOGIC;                    -- Schreibfreigabe
-        wr_data  : in STD_LOGIC_VECTOR(7 downto 0); -- Datenbyte
-        wr_eof   : in STD_LOGIC;                    -- '1' wenn dies das letzte Byte des Frames ist
-        wr_abort : in STD_LOGIC;                    -- '1' verwirft den aktuellen Frame (CRC-Fehler)
+        -- Write side
+        wr_en    : in STD_LOGIC;                    -- Write enable
+        wr_data  : in STD_LOGIC_VECTOR(7 downto 0); -- Data byte
+        wr_eof   : in STD_LOGIC;                    -- '1' for last byte of frame
+        wr_abort : in STD_LOGIC;                    -- '1' discards current frame (e.g., CRC error)
 
-        -- -----------------------------------------------------------------
-        -- Leseseite: Synchrones Lesen mit rd_valid-Flag
-        -- -----------------------------------------------------------------
-        rd_en    : in STD_LOGIC;                     -- Lesefreigabe
-        rd_data  : out STD_LOGIC_VECTOR(7 downto 0); -- Ausgelesenes Datenbyte
-        rd_eof   : out STD_LOGIC;                    -- '1' wenn dies das EOF-Byte ist (nur gueltig wenn rd_valid='1')
-        rd_valid : out STD_LOGIC;                    -- '1' wenn rd_data und rd_eof gueltige Daten enthalten
+        -- Read side
+        rd_en    : in STD_LOGIC;                     -- Read enable
+        rd_data  : out STD_LOGIC_VECTOR(7 downto 0); -- Data byte
+        rd_eof   : out STD_LOGIC;                    -- '1' for EOF byte (valid only when rd_valid='1')
+        rd_valid : out STD_LOGIC;                    -- '1' when rd_data/rd_eof are valid
 
-        -- -----------------------------------------------------------------
-        -- Status-Ausgaenge
-        -- -----------------------------------------------------------------
-        frame_rdy : out STD_LOGIC; -- '1' wenn mindestens ein kompletter Frame im FIFO vorliegt
-        full      : out STD_LOGIC; -- '1' wenn FIFO voll ist (Schreiben nicht moeglich)
-        empty     : out STD_LOGIC  -- '1' wenn FIFO leer ist
+        -- Status
+        frame_rdy : out STD_LOGIC; -- '1' when at least one full frame is stored
+        full      : out STD_LOGIC; -- '1' when FIFO is full
+        empty     : out STD_LOGIC  -- '1' when FIFO is empty
     );
 end entity voq_fifo;
 
 architecture rtl of voq_fifo is
 
-    -- Hilfsfunktion: Berechnet die minimale Bit-Breite fuer einen Counter
-    -- z.B. log2_ceil(4096) = 12, da 2^12 = 4096
+    -- Return the minimum counter width for a given depth
     function log2_ceil(n : INTEGER) return INTEGER is
         variable result      : INTEGER := 0;
         variable val         : INTEGER := n - 1;
@@ -69,33 +60,38 @@ architecture rtl of voq_fifo is
 
     constant ADDR_WIDTH : INTEGER := log2_ceil(DEPTH);
 
-    -- FIFO-Speicher: Jeder Eintrag ist 9 Bit (8 Bit Daten + 1 Bit EOF)
+    -- -------------------------------------------------------------------------
+    -- FIFO RAM: 9 bits per entry (8 data + 1 EOF)
     type ram_t is array (0 to DEPTH - 1) of STD_LOGIC_VECTOR(8 downto 0);
     signal ram : ram_t;
 
-    -- Pointer und Zaehler
-    signal wr_ptr        : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0'); -- Schreib-Adresse
-    signal rd_ptr        : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0'); -- Lese-Adresse
-    signal count         : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Anzahl Bytes im FIFO
-    signal frames_stored : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Anzahl kompletter Frames
+    -- -------------------------------------------------------------------------
+    -- Pointers and counters
+    signal wr_ptr        : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0'); -- Write address
+    signal rd_ptr        : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0'); -- Read address
+    signal count         : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Bytes in FIFO
+    signal frames_stored : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Complete frames stored
 
-    -- Aktueller Frame-Zaehler (nur bis EOF) fuer Rollback bei CRC-Fehler
+    -- Track current frame length to allow rollback on abort
     signal frame_active    : STD_LOGIC                    := '0';
     signal frame_byte_cnt  : unsigned(count'range)        := (others => '0');
 
-    -- Lese-Register (Pipeline-Stage)
-    signal rd_reg       : STD_LOGIC_VECTOR(8 downto 0) := (others => '0'); -- Register fuer aktuell gelesene Daten (Bit 8: EOF, Bits 7-0: Daten)
-    signal rd_valid_reg : STD_LOGIC                    := '0';             -- '1' wenn rd_reg frisch mit Daten gefuellt wurde
+    -- Read pipeline register
+    signal rd_reg       : STD_LOGIC_VECTOR(8 downto 0) := (others => '0'); -- Bit 8: EOF, bits 7-0: data
+    signal rd_valid_reg : STD_LOGIC                    := '0';             -- '1' when rd_reg holds valid data
 
-    -- Interne Flags
+    -- Internal flags
     signal full_int  : STD_LOGIC;
     signal empty_int : STD_LOGIC;
-    signal can_write : STD_LOGIC; -- Schreiben erlaubt (wr_en UND nicht voll)
-    signal can_read  : STD_LOGIC; -- Lesen erlaubt (rd_en UND nicht leer)
+    signal can_write : STD_LOGIC; -- Write allowed
+    signal can_read  : STD_LOGIC; -- Read allowed
 
 begin
 
-    -- Berechne FIFO-Status-Flags
+    -- -------------------------------------------------------------------------
+    -- Status flags
+    -- -------------------------------------------------------------------------
+    -- FIFO status flags
     full_int <= '1' when count = to_unsigned(DEPTH, count'length) else
         '0';
     empty_int <= '1' when count = to_unsigned(0, count'length) else
@@ -107,23 +103,20 @@ begin
         '0';
 
     ---------------------------------------------------------------------------
-    -- 1) Schreibport (kombinatorisch auf RAM)
-    -- Schreibt Datenbyte und EOF-Flag gemeinsam auf die RAM-Adresse wr_ptr
+    -- Write port: store data and EOF flag at wr_ptr
     ---------------------------------------------------------------------------
     write_proc : process(all)
     begin
         if rising_edge(clk) then
             if can_write = '1' then
-                -- Speicherformat: Bit 8 = EOF, Bits 7-0 = Daten
+                -- Bit 8 = EOF, bits 7-0 = data
                 ram(to_integer(wr_ptr)) <= wr_eof & wr_data;
             end if;
         end if;
     end process write_proc;
 
     ---------------------------------------------------------------------------
-    -- 2) Leseport (synchron mit rd_valid-Pipeline)
-    -- rd_reg wird mit Daten aus RAM gefuellt, wenn rd_en='1' und FIFO nicht leer
-    -- rd_valid_reg merkt sich, ob rd_reg gueltige Daten enthaelt
+    -- Read port: load rd_reg when reading and track validity
     ---------------------------------------------------------------------------
     read_proc : process(all)
     begin
@@ -132,30 +125,27 @@ begin
 
         elsif rising_edge(clk) then
             if can_read = '1' then
-                -- Lade Byte aus RAM: EOF-Flag + Datenbyte
+                -- EOF flag + data byte
                 rd_reg <= ram(to_integer(rd_ptr));
             end if;
         end if;
     end process read_proc;
 
-    -- Dekodiere das Read-Register
-    rd_data <= rd_reg(7 downto 0); -- Lower 8 Bits = Daten
-
-    -- rd_eof ist nur gueltig, wenn rd_valid_reg='1'
-    rd_eof   <= rd_reg(8) and rd_valid_reg; -- Bit 8 = EOF-Flag
+    -- Decode read register
+    rd_data <= rd_reg(7 downto 0); -- Lower 8 bits = data
+    rd_eof   <= rd_reg(8) and rd_valid_reg; -- EOF only valid with rd_valid_reg
     rd_valid <= rd_valid_reg when rd_valid_reg = '1' else
-        '0'; -- Signalisiere, ob Register gueltig ist
+        '0';
 
     ---------------------------------------------------------------------------
-    -- 3) Pointer, Belegungszaehler und Frame-Zaehler
-    -- Verwalte Schreib-/Lese-Pointer, Belegungstiefe und komplette Frames
+    -- Pointers, occupancy, and frame tracking
     ---------------------------------------------------------------------------
     ptr_proc : process(all)
         variable count_next : unsigned(count'range);
     begin
 
         if reset = '0' or flush = '1' then
-            -- Reset: Alle Pointer auf 0, FIFO ist leer
+            -- Reset all pointers and counters
             wr_ptr        <= (others => '0');
             rd_ptr        <= (others => '0');
             count         <= (others => '0');
@@ -166,11 +156,11 @@ begin
         end if;
 
         if rising_edge(clk) then
-            -- rd_valid_reg folgt can_read, wird aber nach EOF sofort deaktiviert
+            -- rd_valid_reg follows can_read; cleared immediately after EOF
             rd_valid_reg <= can_read and not (rd_reg(8) and rd_valid_reg);
 
-            -- Pointer- und Belegungszaehler aktualisieren
-            -- Lesen wird nur gezählt, wenn kein EOF gelesen wurde
+            -- Update pointers and occupancy
+            -- Reads are only counted when EOF has not been consumed
             count_next := count;
 
             if can_read = '1' and rd_eof = '0' then
@@ -204,25 +194,25 @@ begin
 
             count <= count_next;
 
-            -- Frame-Zaehler: Zaehle komplette Frames
-            -- Schreiben eines EOF-Bytes (wr_eof='1') erhoeht den Zaehler
-            -- Auslesen eines EOF-Bytes (rd_eof=rd_reg(8)='1') verringert den Zaehler
+            -- Frame counter: increment on write EOF, decrement on read EOF
             if (can_write = '1' and wr_eof = '1') and
                 (rd_valid_reg = '1' and rd_reg(8) = '1') then
-                -- Gleichzeitig: ein komplettes Frame rein, eines raus -> netto keine Aenderung
+                -- One frame in and one frame out in same cycle
                 null;
             elsif (can_write = '1' and wr_eof = '1') then
-                -- Nur Schreiben mit EOF: neues Frame fertig, Zaehler +1
+                -- New frame completed
                 frames_stored <= frames_stored + 1;
             elsif (rd_valid_reg = '1' and rd_reg(8) = '1') then
-                -- Nur Lesen mit EOF: ein Frame verlasst das FIFO, Zaehler -1
+                -- Frame consumed
                 frames_stored <= frames_stored - 1;
             end if;
 
         end if;
     end process ptr_proc;
 
-    -- Ausgabe Status-Signale
+    -- -------------------------------------------------------------------------
+    -- Outputs
+    -- -------------------------------------------------------------------------
     frame_rdy <= '1' when frames_stored > to_unsigned(0, frames_stored'length) else
         '0';
     full  <= full_int;

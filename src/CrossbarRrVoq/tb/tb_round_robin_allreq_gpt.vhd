@@ -42,6 +42,7 @@ ARCHITECTURE sim OF tb_round_robin_allreq_gpt IS
     SIGNAL active : STD_LOGIC;
 
     CONSTANT CLK_PERIOD : TIME := 10 ns;
+    CONSTANT GAP_CYCLES : NATURAL := 12;
 
 BEGIN
 
@@ -74,11 +75,12 @@ BEGIN
         --------------------------------------------------------------------
         frame_rdy <= "0000";
         eof <= '0';
-
-        WAIT UNTIL rising_edge(clk);
-        WAIT UNTIL rising_edge(clk);
-
         reset <= '0';
+
+        WAIT UNTIL rising_edge(clk);
+        WAIT UNTIL rising_edge(clk);
+
+        reset <= '1';
 
         --------------------------------------------------------------------
         -- Always all requests active
@@ -88,6 +90,7 @@ BEGIN
         --------------------------------------------------------------------
         -- Generate repeated frames
         -- Each frame lasts 2 clock cycles in LOCKED, then eof is asserted
+        -- Enforce a minimum gap between EOFs
         --------------------------------------------------------------------
         FOR i IN 0 TO 11 LOOP
             -- first cycle of frame
@@ -104,6 +107,11 @@ BEGIN
 
             -- deassert eof again
             eof <= '0';
+
+            -- inter-frame gap (minimum 12 clocks between EOFs)
+            FOR g IN 1 TO GAP_CYCLES LOOP
+                WAIT UNTIL rising_edge(clk);
+            END LOOP;
         END LOOP;
 
         --------------------------------------------------------------------

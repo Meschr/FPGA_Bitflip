@@ -1,53 +1,45 @@
 -- =============================================================================
--- Top-Level Modul: voq_rr_crossbar_switch_top
+-- Top-Level Module: voq_rr_crossbar_switch_top
 --
--- Zweck:
---   Implementiert einen 4x4 VOQ-Switch (Virtual Output Queuing) mit
---   Round-Robin-Arbitrierung und Crossbar-Ausgangsstufe.
+-- Purpose:
+--   4x4 VOQ (Virtual Output Queuing) switch with round-robin arbitration
+--   and a crossbar output stage.
 --
--- Architektur-Ueberblick:
---   Fuer jeden der 4 Ausgaenge gibt es ein unabhaengiges VOQ-Buendel:
---     - voq_4to1  : 4 FIFOs, je einer pro Eingangsport, puffern die Frames
---                   die fuer diesen Ausgang bestimmt sind.
---     - round_robin: Arbiter, der entscheidet welcher der 4 FIFOs als naechstes
---                   lesen darf. Er vergibt den Grant erst nach vollstaendigem
---                   Uebertragen eines Frames (Lock bis EOF).
---     - crossbar_switch: Schaltet fuer jeden Ausgang den Datenstrom des aktuell
---                   granteten FIFOs durch (gesteuert per rr_sel).
+-- Architecture overview:
+--   For each of the 4 outputs there is an independent VOQ bundle:
+--     - voq_4to1   : 4 FIFOs (one per input) buffering frames for that output.
+--     - round_robin: Arbiter choosing which FIFO may read next. The grant is
+--                    held until an entire frame is transmitted (locked to EOF).
+--     - crossbar_switch: Routes the selected FIFO stream to the output
+--                    (controlled by rr_sel).
 --
--- Datenfluss (Beispiel: Eingang 2 -> Ausgang 1):
---   wr_data_in2_out1 --> VOQ(out1).FIFO(in2) --> round_robin(out1) vergibt Grant
+-- Data flow example (input 2 -> output 1):
+--   wr_data_in2_out1 --> VOQ(out1).FIFO(in2) --> round_robin(out1) grant
 --   --> rd_en_o1(2) = '1' --> rd_data_o1_2 --> crossbar (sel_1="10") --> out_data_1
 --
--- VOQ-Prinzip:
---   Jeder Eingang schreibt gleichzeitig in bis zu 4 FIFOs (einen je Zielausgang).
---   Dadurch koennen keine Head-of-Line-Blocking-Probleme entstehen, die beim
---   klassischen Shared-Memory-Switch auftreten wuerden.
+-- VOQ principle:
+--   Each input can write to up to 4 FIFOs (one per destination output),
+--   avoiding head-of-line blocking seen in shared-memory switches.
 --
--- Schnittstellen-Konvention:
---   wr_data_inX_outY : Schreibdaten von Eingang X fuer Ausgang Y
---   wr_en_inX_outY   : Schreibfreigabe (aktiv high)
---   wr_eof_inX_outY  : End-of-Frame Markierung beim letzten Byte eines Frames
---   out_data_Y       : Ausgabedaten an Ausgang Y
---   out_valid_Y      : Gibt an, ob die Ausgabedaten gueltig sind (FIFO nicht leer)
+-- Interface convention:
+--   wr_data_inX_outY : write data from input X to output Y
+--   wr_en_inX_outY   : write enable (active high)
+--   wr_eof_inX_outY  : end-of-frame mark on the last byte of a frame
+--   out_data_Y       : output data for output Y
+--   out_valid_Y      : output data valid (FIFO not empty)
 --
--- Wichtige interne Signale:
---   frame_rdy_oX  : 4-Bit Vektor, Bit i = '1' wenn FIFO(i) von Queue X einen
---                   vollstaendigen Frame (mind. 1 EOF gesehen) bereit haelt
---   rr_sel_oX     : 2-Bit Index des aktuell bedienten FIFOs (0..3)
---   rr_grant_oX   : One-Hot Lesefreigabe fuer die 4 FIFOs der Queue X
---                   (z.B. "0100" = FIFO 2 darf lesen)
---   eof_mux_oX    : EOF-Signal des aktuell vom RR selektierten FIFOs;
---                   signalisiert dem Arbiter, dass der aktuelle Frame zu Ende ist
---   rd_en_oX      : wird direkt mit rr_grant_oX belegt -> FIFO-Lese-Enable
---
--- Debug-Ausgaenge:
---   rr_sel_X, rr_grant_X, rr_active_X : RR-Zustand pro Output
---   frame_rdy_dbg_X, rd_eof_dbg_X     : FIFO-Bereitschaft und EOF-Status
---   full_dbg_X, empty_dbg_X           : FIFO-Fuellstand-Flags
+-- Key internal signals:
+--   frame_rdy_oX  : 4-bit vector, bit i = '1' if FIFO(i) of queue X has a
+--                   complete frame (at least one EOF seen)
+--   rr_sel_oX     : 2-bit index of the currently served FIFO (0..3)
+--   rr_grant_oX   : one-hot read enable for the 4 FIFOs of queue X
+--                   (e.g. "0100" = FIFO 2 may read)
+--   eof_mux_oX    : EOF of the FIFO currently selected by the RR arbiter;
+--                   signals end of frame to the arbiter
+--   rd_en_oX      : driven directly by rr_grant_oX -> FIFO read enable
 --
 -- Generics:
---   DEPTH : Tiefe jedes einzelnen VOQ-FIFOs in Byte (Standard: 4096)
+--   DEPTH : depth of each VOQ FIFO in bytes (default: 4096)
 -- =============================================================================
 
 LIBRARY ieee;
@@ -58,51 +50,51 @@ ENTITY voq_rr_crossbar_switch_top IS
         DEPTH : INTEGER := 4096 -- Tiefe jedes einzelnen VOQ-FIFOs in Byte
     );
     PORT (
-        clk : IN STD_LOGIC; -- Systemtakt (steigende Flanke aktiv)
-        reset : IN STD_LOGIC; -- Synchroner Reset, aktiv high
+        clk : IN STD_LOGIC; -- System clock (rising edge)
+        reset : IN STD_LOGIC; -- Synchronous reset, active high
 
-        -- Flush-Signale: setzt die FIFOs einer Output-Queue zurueck.
-        -- Bit i = '1' leert FIFO i der jeweiligen Queue sofort.
-        flush_out0 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue fuer Ausgang 0
-        flush_out1 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue fuer Ausgang 1
-        flush_out2 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue fuer Ausgang 2
-        flush_out3 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue fuer Ausgang 3
+        -- Flush signals: reset the FIFOs of an output queue.
+        -- Bit i = '1' clears FIFO i of the respective queue immediately.
+        flush_out0 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue for output 0
+        flush_out1 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue for output 1
+        flush_out2 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue for output 2
+        flush_out3 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Queue for output 3
 
         -- =====================================================================
-        -- Schreibseite: 4 Eingangsports x 4 Zielports = 16 getrennte Kanaele
-        -- Jeder Kanal schreibt byteweise in das zugehoerige VOQ-FIFO.
+        -- Write side: 4 input ports x 4 destination ports = 16 separate channels
+        -- Each channel writes bytes into the associated VOQ FIFO.
         -- =====================================================================
 
-        -- Eingang 0: Frames von Port 0 fuer jeden der 4 Ausgaenge
-        wr_en_in0 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
-        wr_data_in0 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
-        wr_eof_in0 : IN STD_LOGIC; -- '1' beim letzten Byte des Frames
-        wr_abort_in0 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 0
-        -- Eingang 1: Frames von Port 1 fuer jeden der 4 Ausgaenge
-        wr_en_in1 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
-        wr_data_in1 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
+        -- Input 0: frames from port 0 to each of the 4 outputs
+        wr_en_in0 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Write enable
+        wr_data_in0 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Data byte
+        wr_eof_in0 : IN STD_LOGIC; -- '1' on last byte of frame
+        wr_abort_in0 : IN STD_LOGIC; -- '1' drops the current frame from input 0
+        -- Input 1: frames from port 1 to each of the 4 outputs
+        wr_en_in1 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Write enable
+        wr_data_in1 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Data byte
         wr_eof_in1 : IN STD_LOGIC;
-        wr_abort_in1 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 1
-        -- Eingang 2: Frames von Port 2 fuer jeden der 4 Ausgaenge
-        wr_en_in2 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
-        wr_data_in2 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
+        wr_abort_in1 : IN STD_LOGIC; -- '1' drops the current frame from input 1
+        -- Input 2: frames from port 2 to each of the 4 outputs
+        wr_en_in2 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Write enable
+        wr_data_in2 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Data byte
         wr_eof_in2 : IN STD_LOGIC;
-        wr_abort_in2 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 2
+        wr_abort_in2 : IN STD_LOGIC; -- '1' drops the current frame from input 2
 
-        -- Eingang 3: Frames von Port 3 fuer jeden der 4 Ausgaenge
-        wr_en_in3 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Schreibfreigabe   
-        wr_data_in3 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Datenbyte
+        -- Input 3: frames from port 3 to each of the 4 outputs
+        wr_en_in3 : IN STD_LOGIC_VECTOR(3 DOWNTO 0); -- Write enable
+        wr_data_in3 : IN STD_LOGIC_VECTOR(7 DOWNTO 0); -- Data byte
         wr_eof_in3 : IN STD_LOGIC;
-        wr_abort_in3 : IN STD_LOGIC; -- '1' verwirft den aktuellen Frame von Eingang 3
+        wr_abort_in3 : IN STD_LOGIC; -- '1' drops the current frame from input 3
         -- =====================================================================
-        -- Ausgangsseite: Nutzdaten und Valid-Flag je Ausgangsport
+        -- Output side: payload data and valid flag per output port
         -- =====================================================================
-        out_data_0 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Ausgabedaten Ausgang 0
-        out_data_1 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Ausgabedaten Ausgang 1
-        out_data_2 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Ausgabedaten Ausgang 2
-        out_data_3 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Ausgabedaten Ausgang 3
+        out_data_0 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Output data for output 0
+        out_data_1 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Output data for output 1
+        out_data_2 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Output data for output 2
+        out_data_3 : OUT STD_LOGIC_VECTOR(7 DOWNTO 0); -- Output data for output 3
 
-        -- Valid = '1': Ausgabedaten sind gueltig (mind. ein FIFO dieser Queue aktiv)
+        -- Valid = '1': output data is valid (at least one FIFO active)
         out_valid_0 : OUT STD_LOGIC;
         out_valid_1 : OUT STD_LOGIC;
         out_valid_2 : OUT STD_LOGIC;
@@ -114,38 +106,38 @@ END ENTITY;
 ARCHITECTURE rtl OF voq_rr_crossbar_switch_top IS
 
     ---------------------------------------------------------------------------
-    -- Interne Signale fuer Output-Queue 0
-    -- Verbinden voq_4to1, round_robin und crossbar fuer Ausgang 0.
+    -- Internal signals for output queue 0
+    -- Connect voq_4to1, round_robin, and crossbar for output 0.
     ---------------------------------------------------------------------------
 
-    -- One-Hot Lesefreigabe: Bit i = '1' -> FIFO i von Queue 0 darf lesen.
-    -- Wird direkt vom RR-Grant getrieben.
+    -- One-hot read enable: bit i = '1' -> FIFO i of queue 0 may read.
+    -- Driven directly by the RR grant.
     SIGNAL rd_en_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-    -- Ausgangsdaten der vier FIFOs in Queue 0 (je ein Byte pro Takt)
-    -- rd_data_o0_i: Lesedaten des FIFOs von Eingang i, destined fuer Ausgang 0
+    -- Output data of the four FIFOs in queue 0 (one byte per cycle)
+    -- rd_data_o0_i: read data of FIFO from input i, destined for output 0
     SIGNAL rd_data_o0_0 : STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL rd_data_o0_1 : STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL rd_data_o0_2 : STD_LOGIC_VECTOR(7 DOWNTO 0);
     SIGNAL rd_data_o0_3 : STD_LOGIC_VECTOR(7 DOWNTO 0);
 
-    -- EOF-Flags der vier FIFOs (Bit i = '1': aktuelles Byte ist Frame-Ende)
+    -- EOF flags of the four FIFOs (bit i = '1': current byte is end of frame)
     SIGNAL rd_eof_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
-    -- Frame-Ready-Flags (Bit i = '1': FIFO i hat vollstaendigen Frame)
+    -- Frame-ready flags (bit i = '1': FIFO i has a complete frame)
     SIGNAL frame_rdy_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
-    -- Full/Empty-Status der vier FIFOs
+    -- Full/empty status of the four FIFOs
     SIGNAL full_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL empty_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-    -- RR-Ausgangssignale fuer Queue 0
-    SIGNAL rr_sel_o0 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- Index des granteten FIFOs
-    SIGNAL rr_grant_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0); -- One-Hot Grant
-    SIGNAL rr_active_o0 : STD_LOGIC; -- Arbiter belegt
-    -- EOF des aktuell vom RR selektierten FIFOs (via MUX aus rd_eof_o0 ausgewaehlt)
+    -- RR output signals for queue 0
+    SIGNAL rr_sel_o0 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- Index of granted FIFO
+    SIGNAL rr_grant_o0 : STD_LOGIC_VECTOR(3 DOWNTO 0); -- One-hot grant
+    SIGNAL rr_active_o0 : STD_LOGIC; -- Arbiter busy
+    -- EOF of the FIFO currently selected by RR (via MUX from rd_eof_o0)
     SIGNAL eof_mux_o0 : STD_LOGIC;
 
     ---------------------------------------------------------------------------
-    -- Interne Signale fuer Output-Queue 1 (analog zu Queue 0)
+    -- Internal signals for output queue 1 (same as queue 0)
     ---------------------------------------------------------------------------
     SIGNAL rd_en_o1 : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
@@ -165,7 +157,7 @@ ARCHITECTURE rtl OF voq_rr_crossbar_switch_top IS
     SIGNAL eof_mux_o1 : STD_LOGIC;
 
     ---------------------------------------------------------------------------
-    -- Interne Signale fuer Output-Queue 2 (analog zu Queue 0)
+    -- Internal signals for output queue 2 (same as queue 0)
     ---------------------------------------------------------------------------
     SIGNAL rd_en_o2 : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
@@ -185,7 +177,7 @@ ARCHITECTURE rtl OF voq_rr_crossbar_switch_top IS
     SIGNAL eof_mux_o2 : STD_LOGIC;
 
     ---------------------------------------------------------------------------
-    -- Interne Signale fuer Output-Queue 3 (analog zu Queue 0)
+    -- Internal signals for output queue 3 (same as queue 0)
     ---------------------------------------------------------------------------
     SIGNAL rd_en_o3 : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
@@ -207,11 +199,11 @@ ARCHITECTURE rtl OF voq_rr_crossbar_switch_top IS
 BEGIN
 
     ---------------------------------------------------------------------------
-    -- Output-Queue 0: VOQ-Buendel + Round-Robin-Arbitrierung
+    -- Output queue 0: VOQ bundle + round-robin arbitration
     --
-    -- voq_4to1 buendelt die 4 FIFOs (einen je Eingangsport) fuer Ausgang 0.
-    -- Der Round-Robin bestimmt, welcher FIFO gerade lesen darf.
-    -- Steuerfluss: frame_rdy -> RR -> grant -> rd_en -> FIFO liest
+    -- voq_4to1 bundles the 4 FIFOs (one per input) for output 0.
+    -- The round-robin selects which FIFO may read.
+    -- Control flow: frame_rdy -> RR -> grant -> rd_en -> FIFO read
     ---------------------------------------------------------------------------
     u_voq_out0 : ENTITY work.voq_4to1
         GENERIC MAP(DEPTH => DEPTH)
@@ -220,7 +212,7 @@ BEGIN
             reset => reset,
             flush => flush_out0,
 
-            -- Schreibports: Eingang 0..3, alle fuer Ausgang 0
+            -- Write ports: inputs 0..3, all destined for output 0
             wr_data_in0 => wr_data_in0,
             wr_en_in0 => wr_en_in0(0),
             wr_eof_in0 => wr_eof_in0,
@@ -241,51 +233,50 @@ BEGIN
             wr_eof_in3 => wr_eof_in3,
             wr_abort_in3 => wr_abort_in3,
 
-            -- One-Hot Lesefreigabe: kommt vom RR-Arbiter (via rd_en_o0)
+            -- One-hot read enable: from RR arbiter (via rd_en_o0)
             rd_en => rd_en_o0,
 
-            -- Ausgangsdaten der 4 FIFOs (parallel verfuegbar, Crossbar waehlt aus)
+            -- Output data of the 4 FIFOs (available in parallel, crossbar selects)
             rd_data_0 => rd_data_o0_0,
             rd_data_1 => rd_data_o0_1,
             rd_data_2 => rd_data_o0_2,
             rd_data_3 => rd_data_o0_3,
 
-            rd_valid => out_valid_0, -- '1': mind. ein FIFO liefert gueltige Daten
-            rd_eof => rd_eof_o0, -- EOF-Flags aller 4 FIFOs
-            frame_rdy => frame_rdy_o0, -- Frame-Ready-Flags fuer RR-Eingabe
+            rd_valid => out_valid_0, -- '1': at least one FIFO provides valid data
+            rd_eof => rd_eof_o0, -- EOF flags of all 4 FIFOs
+            frame_rdy => frame_rdy_o0, -- Frame-ready flags for RR input
             full => full_o0,
             empty => empty_o0
         );
 
-    -- EOF-MUX fuer Queue 0:
-    -- Der RR-Arbiter benoetigt das EOF-Signal des aktuell bedienten FIFOs,
-    -- um zu erkennen, wann ein Frame abgeschlossen ist und der naechste Grant
-    -- vergeben werden kann. rr_sel_o0 gibt den Index (0..3) an.
+    -- EOF MUX for queue 0:
+    -- The RR arbiter needs the EOF of the currently served FIFO to
+    -- detect end of frame and move to the next grant. rr_sel_o0 is the index (0..3).
     WITH rr_sel_o0 SELECT
         eof_mux_o0 <= rd_eof_o0(0) WHEN "00",
         rd_eof_o0(1) WHEN "01",
         rd_eof_o0(2) WHEN "10",
         rd_eof_o0(3) WHEN OTHERS;
 
-    -- Round-Robin Arbiter fuer Queue 0:
-    -- Wartet auf frame_rdy, vergibt Grant, haelt diesen bis EOF ('1'),
-    -- dann naechster bereiter FIFO in Round-Robin-Reihenfolge.
+    -- Round-robin arbiter for queue 0:
+    -- Waits for frame_rdy, issues a grant, holds it until EOF ('1'),
+    -- then advances to the next ready FIFO in round-robin order.
     u_rr_o0 : ENTITY work.round_robin
         PORT MAP(
             clk => clk,
             reset => reset,
-            frame_rdy => frame_rdy_o0, -- Welche FIFOs haben einen Frame bereit?
-            eof => eof_mux_o0, -- Ende des aktuellen Frames -> Grant wechseln
-            sel => rr_sel_o0, -- Aktueller FIFO-Index (an Crossbar)
-            grant => rr_grant_o0, -- One-Hot Grant (an FIFO rd_en)
-            active => rr_active_o0 -- Arbiter bedient gerade einen Frame
+            frame_rdy => frame_rdy_o0, -- Which FIFOs have a frame ready?
+            eof => eof_mux_o0, -- End of current frame -> advance grant
+            sel => rr_sel_o0, -- Current FIFO index (to crossbar)
+            grant => rr_grant_o0, -- One-hot grant (to FIFO rd_en)
+            active => rr_active_o0 -- Arbiter is serving a frame
         );
 
-    -- Grant direkt als FIFO-Lesefreigabe verwenden
+    -- Use the grant directly as FIFO read enable
     rd_en_o0 <= rr_grant_o0;
 
     ---------------------------------------------------------------------------
-    -- Output-Queue 1: VOQ-Buendel + Round-Robin-Arbitrierung (analog zu Queue 0)
+    -- Output queue 1: VOQ bundle + round-robin arbitration (same as queue 0)
     ---------------------------------------------------------------------------
     u_voq_out1 : ENTITY work.voq_4to1
         GENERIC MAP(DEPTH => DEPTH)
@@ -328,14 +319,14 @@ BEGIN
             empty => empty_o1
         );
 
-    -- EOF-MUX fuer Queue 1: waehlt EOF des aktuell granteten FIFOs aus
+    -- EOF MUX for queue 1: select EOF of the currently granted FIFO
     WITH rr_sel_o1 SELECT
         eof_mux_o1 <= rd_eof_o1(0) WHEN "00",
         rd_eof_o1(1) WHEN "01",
         rd_eof_o1(2) WHEN "10",
         rd_eof_o1(3) WHEN OTHERS;
 
-    -- Round-Robin Arbiter fuer Queue 1
+    -- Round-robin arbiter for queue 1
     u_rr_o1 : ENTITY work.round_robin
         PORT MAP(
             clk => clk,
@@ -350,7 +341,7 @@ BEGIN
     rd_en_o1 <= rr_grant_o1;
 
     ---------------------------------------------------------------------------
-    -- Output-Queue 2: VOQ-Buendel + Round-Robin-Arbitrierung (analog zu Queue 0)
+    -- Output queue 2: VOQ bundle + round-robin arbitration (same as queue 0)
     ---------------------------------------------------------------------------
     u_voq_out2 : ENTITY work.voq_4to1
         GENERIC MAP(DEPTH => DEPTH)
@@ -394,14 +385,14 @@ BEGIN
             empty => empty_o2
         );
 
-    -- EOF-MUX fuer Queue 2: waehlt EOF des aktuell granteten FIFOs aus
+    -- EOF MUX for queue 2: select EOF of the currently granted FIFO
     WITH rr_sel_o2 SELECT
         eof_mux_o2 <= rd_eof_o2(0) WHEN "00",
         rd_eof_o2(1) WHEN "01",
         rd_eof_o2(2) WHEN "10",
         rd_eof_o2(3) WHEN OTHERS;
 
-    -- Round-Robin Arbiter fuer Queue 2
+    -- Round-robin arbiter for queue 2
     u_rr_o2 : ENTITY work.round_robin
         PORT MAP(
             clk => clk,
@@ -416,7 +407,7 @@ BEGIN
     rd_en_o2 <= rr_grant_o2;
 
     ---------------------------------------------------------------------------
-    -- Output-Queue 3: VOQ-Buendel + Round-Robin-Arbitrierung (analog zu Queue 0)
+    -- Output queue 3: VOQ bundle + round-robin arbitration (same as queue 0)
     ---------------------------------------------------------------------------
     u_voq_out3 : ENTITY work.voq_4to1
         GENERIC MAP(DEPTH => DEPTH)
@@ -460,14 +451,14 @@ BEGIN
             empty => empty_o3
         );
 
-    -- EOF-MUX fuer Queue 3: waehlt EOF des aktuell granteten FIFOs aus
+    -- EOF MUX for queue 3: select EOF of the currently granted FIFO
     WITH rr_sel_o3 SELECT
         eof_mux_o3 <= rd_eof_o3(0) WHEN "00",
         rd_eof_o3(1) WHEN "01",
         rd_eof_o3(2) WHEN "10",
         rd_eof_o3(3) WHEN OTHERS;
 
-    -- Round-Robin Arbiter fuer Queue 3
+    -- Round-robin arbiter for queue 3
     u_rr_o3 : ENTITY work.round_robin
         PORT MAP(
             clk => clk,
@@ -482,54 +473,54 @@ BEGIN
     rd_en_o3 <= rr_grant_o3;
 
     ---------------------------------------------------------------------------
-    -- Crossbar-Switch: Ausgangsmultiplexer
+    -- Crossbar switch: output multiplexers
     --
-    -- Die Crossbar nimmt alle 16 FIFO-Ausgangsdatenstroeme entgegen und
-    -- schaltet fuer jeden Ausgangsport (0..3) genau einen Datenstrom durch.
-    -- Die Auswahl erfolgt ueber rr_sel_oX (2-Bit Index des granteten FIFOs).
+    -- The crossbar takes all 16 FIFO output streams and routes exactly one
+    -- stream to each output port (0..3). Selection is driven by rr_sel_oX
+    -- (2-bit index of the granted FIFO).
     --
-    -- Port-Benennung: data_mX_iY
-    --   mX = Output-Queue X (welcher Ausgang diese Daten benoetigt)
-    --   iY = FIFO von Eingang Y innerhalb dieser Queue
+    -- Port naming: data_mX_iY
+    --   mX = output queue X (which output these data belong to)
+    --   iY = FIFO of input Y within that queue
     --
-    -- Beispiel: data_m2_i1 = Daten aus Queue 2, FIFO von Eingang 1
-    --           -> diese Bytes kommen von Eingang 1 und sind fuer Ausgang 2 bestimmt
+    -- Example: data_m2_i1 = data from queue 2, FIFO of input 1
+    --          -> bytes from input 1 destined for output 2
     ---------------------------------------------------------------------------
     u_xbar : ENTITY work.crossbar_switch
         PORT MAP(
         
-            -- Eingangsdaten fuer Ausgangsport 0 (alle 4 FIFOs von Queue 0)
-            data_m0_i0 => rd_data_o0_0, -- Queue 0, FIFO von Eingang 0
-            data_m0_i1 => rd_data_o0_1, -- Queue 0, FIFO von Eingang 1
-            data_m0_i2 => rd_data_o0_2, -- Queue 0, FIFO von Eingang 2
-            data_m0_i3 => rd_data_o0_3, -- Queue 0, FIFO von Eingang 3
+            -- Input data for output port 0 (all 4 FIFOs from queue 0)
+            data_m0_i0 => rd_data_o0_0, -- Queue 0, FIFO from input 0
+            data_m0_i1 => rd_data_o0_1, -- Queue 0, FIFO from input 1
+            data_m0_i2 => rd_data_o0_2, -- Queue 0, FIFO from input 2
+            data_m0_i3 => rd_data_o0_3, -- Queue 0, FIFO from input 3
 
-            -- Eingangsdaten fuer Ausgangsport 1 (alle 4 FIFOs von Queue 1)
+            -- Input data for output port 1 (all 4 FIFOs from queue 1)
             data_m1_i0 => rd_data_o1_0,
             data_m1_i1 => rd_data_o1_1,
             data_m1_i2 => rd_data_o1_2,
             data_m1_i3 => rd_data_o1_3,
 
-            -- Eingangsdaten fuer Ausgangsport 2 (alle 4 FIFOs von Queue 2)
+            -- Input data for output port 2 (all 4 FIFOs from queue 2)
             data_m2_i0 => rd_data_o2_0,
             data_m2_i1 => rd_data_o2_1,
             data_m2_i2 => rd_data_o2_2,
             data_m2_i3 => rd_data_o2_3,
 
-            -- Eingangsdaten fuer Ausgangsport 3 (alle 4 FIFOs von Queue 3)
+            -- Input data for output port 3 (all 4 FIFOs from queue 3)
             data_m3_i0 => rd_data_o3_0,
             data_m3_i1 => rd_data_o3_1,
             data_m3_i2 => rd_data_o3_2,
             data_m3_i3 => rd_data_o3_3,
 
-            -- Auswahlsignale: Index des aktuell granteten FIFOs je Queue
-            -- (kommen direkt vom jeweiligen Round-Robin-Arbiter)
-            sel_0 => rr_sel_o0, -- Steuert MUX fuer out_data_0
-            sel_1 => rr_sel_o1, -- Steuert MUX fuer out_data_1
-            sel_2 => rr_sel_o2, -- Steuert MUX fuer out_data_2
-            sel_3 => rr_sel_o3, -- Steuert MUX fuer out_data_3
+            -- Select signals: index of the granted FIFO per queue
+            -- (driven directly by the respective round-robin arbiter)
+            sel_0 => rr_sel_o0, -- Controls MUX for out_data_0
+            sel_1 => rr_sel_o1, -- Controls MUX for out_data_1
+            sel_2 => rr_sel_o2, -- Controls MUX for out_data_2
+            sel_3 => rr_sel_o3, -- Controls MUX for out_data_3
 
-            -- Ausgabedaten der vier Ausgangsports
+            -- Output data for the four output ports
             out_data_0 => out_data_0,
             out_data_1 => out_data_1,
             out_data_2 => out_data_2,
