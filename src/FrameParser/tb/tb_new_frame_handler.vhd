@@ -34,7 +34,7 @@ ARCHITECTURE tb OF tb_new_frame_handler IS
     SIGNAL frame_rdy_handler : STD_LOGIC;
     SIGNAL full_buffer : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
-    FILE stimulus_file : text OPEN read_mode IS "src/FrameParser/src/stimulus.txt";
+    FILE stimulus_file : text OPEN read_mode IS "src/stimulus.txt";
 
     FUNCTION contains_str(source : STRING; needle : STRING) RETURN BOOLEAN IS
         VARIABLE match : BOOLEAN;
