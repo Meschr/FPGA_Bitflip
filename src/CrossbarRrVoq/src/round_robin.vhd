@@ -35,7 +35,9 @@ end entity round_robin;
 
 architecture rtl of round_robin is
 
-    type state_t is (IDLE, LOCKED);
+    type state_t is (IDLE, LOCKED, GAP);
+
+    constant GAP_CYCLES : natural := 11;
 
     signal state_reg   : state_t := IDLE;
     signal state_next  : state_t;
@@ -43,6 +45,8 @@ architecture rtl of round_robin is
     signal rr_ptr_next : unsigned(1 downto 0);
     signal sel_reg     : unsigned(1 downto 0) := (others => '0');
     signal sel_next    : unsigned(1 downto 0);
+    signal gap_cnt_reg : unsigned(3 downto 0) := (others => '0');
+    signal gap_cnt_next: unsigned(3 downto 0);
 
 begin
     -- -------------------------------------------------------------------------
@@ -53,10 +57,12 @@ begin
             state_reg  <= IDLE;
             rr_ptr_reg <= (others => '0');
             sel_reg    <= (others => '0');
+            gap_cnt_reg <= (others => '0');
         elsif rising_edge(clk) then
             state_reg  <= state_next;
             rr_ptr_reg <= rr_ptr_next;
             sel_reg    <= sel_next;
+            gap_cnt_reg <= gap_cnt_next;
         end if;
     end process seq_proc;
 
@@ -71,6 +77,7 @@ begin
         state_next  <= state_reg;
         rr_ptr_next <= rr_ptr_reg;
         sel_next    <= sel_reg;
+        gap_cnt_next <= gap_cnt_reg;
 
         case state_reg is
             when IDLE =>
@@ -96,7 +103,17 @@ begin
                 -- End of frame: move pointer to the next FIFO.
                 if eof = '1' then
                     rr_ptr_next <= sel_reg + 1;
-                    state_next  <= IDLE;
+                    state_next  <= GAP;
+                    gap_cnt_next <= (others => '0');
+                end if;
+
+            when GAP =>
+                -- Enforce end-of-frame gap before selecting the next frame.
+                if gap_cnt_reg = to_unsigned(GAP_CYCLES - 1, gap_cnt_reg'length) then
+                    state_next   <= IDLE;
+                    gap_cnt_next <= (others => '0');
+                else
+                    gap_cnt_next <= gap_cnt_reg + 1;
                 end if;
         end case;
     end process comb_proc;
