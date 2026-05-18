@@ -14,26 +14,16 @@ END ENTITY;
 
 ARCHITECTURE sim OF tb_fcs_check_parallel IS
 
-  --------------------------------------------------------------------------
-  -- DUT component (ADAPT THIS to your actual parallel entity name/ports)
-  --------------------------------------------------------------------------
-  COMPONENT fcs_check_parallel IS
-    PORT (
-      clk : IN STD_LOGIC;
-      reset : IN STD_LOGIC;
-      start_of_frame : IN STD_LOGIC;
-      end_of_frame : IN STD_LOGIC;
-      data_in : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-      fcs_error : OUT STD_LOGIC
-    );
-  END COMPONENT;
-
   SIGNAL clk : STD_LOGIC := '0';
   SIGNAL reset : STD_LOGIC := '1';
   SIGNAL start_of_frame : STD_LOGIC := '0';
   SIGNAL end_of_frame : STD_LOGIC := '0';
   SIGNAL data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
   SIGNAL fcs_error : STD_LOGIC;
+  SIGNAL fcs_ok : STD_LOGIC;
+  SIGNAL data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  SIGNAL wr_en : STD_LOGIC;
+  SIGNAL eof_out : STD_LOGIC;
 
   CONSTANT CLK_PERIOD : TIME := 10 ns;
 
@@ -71,37 +61,58 @@ ARCHITECTURE sim OF tb_fcs_check_parallel IS
   -- Send frame procedure: byte per rising edge
   PROCEDURE send_frame(
     CONSTANT pkt : IN t_byte_array;
-    SIGNAL clk : IN STD_LOGIC;
-    SIGNAL start_of_frame : OUT STD_LOGIC;
-    SIGNAL end_of_frame : OUT STD_LOGIC;
-    SIGNAL data_in : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+    SIGNAL clk_i : IN STD_LOGIC;
+    SIGNAL sof_o : OUT STD_LOGIC;
+    SIGNAL eof_o : OUT STD_LOGIC;
+    SIGNAL data_in_o : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+    CONSTANT label_text : IN STRING
   ) IS
   BEGIN
     FOR i IN pkt'RANGE LOOP
 
       -- start_of_frame on first byte
       IF i = pkt'low THEN
-        start_of_frame <= '1';
+        sof_o <= '1';
       ELSE
-        start_of_frame <= '0';
+        sof_o <= '0';
       END IF;
 
       -- end_of_frame on last Byte of the whole frame 
       IF i = (pkt'high) THEN
-        end_of_frame <= '1';
+        eof_o <= '1';
       ELSE
-        end_of_frame <= '0';
+        eof_o <= '0';
       END IF;
 
-      data_in <= pkt(i);
-      WAIT UNTIL rising_edge(clk);
+      data_in_o <= pkt(i);
+      WAIT UNTIL rising_edge(clk_i);
+      WAIT FOR 0 ns;
+
+      IF i < pkt'high THEN
+        ASSERT wr_en = '1'
+          REPORT label_text & ": wr_en not asserted during frame data"
+          SEVERITY error;
+        ASSERT eof_out = '0'
+          REPORT label_text & ": eof_out asserted too early"
+          SEVERITY error;
+      END IF;
 
     END LOOP;
 
+    ASSERT wr_en = '0'
+      REPORT label_text & ": wr_en must deassert on end_of_frame"
+      SEVERITY error;
+    ASSERT eof_out = '1'
+      REPORT label_text & ": eof_out not asserted at frame end"
+      SEVERITY error;
+    ASSERT ((fcs_ok = '1' AND fcs_error = '0') OR (fcs_ok = '0' AND fcs_error = '1'))
+      REPORT label_text & ": expected exactly one of fcs_ok/fcs_error high at frame end"
+      SEVERITY error;
+
     -- idle afterwards
-    start_of_frame <= '0';
-    end_of_frame <= '0';
-    data_in <= (OTHERS => '0');
+    sof_o <= '0';
+    eof_o <= '0';
+    data_in_o <= (OTHERS => '0');
   END PROCEDURE;
 
 BEGIN
@@ -110,43 +121,49 @@ BEGIN
   clk <= NOT clk AFTER CLK_PERIOD/2;
 
   -- DUT instance
-  dut : fcs_check_parallel
+  dut : ENTITY work.fcs_check_parallel
   PORT MAP(
     clk => clk,
     reset => reset,
     start_of_frame => start_of_frame,
     end_of_frame => end_of_frame,
     data_in => data_in,
-    fcs_error => fcs_error
+    fcs_error => fcs_error,
+    fcs_ok => fcs_ok,
+    data_out => data_out,
+    wr_en => wr_en,
+    eof_out => eof_out
   );
 
   -- Stimulus
   stim : PROCESS
   BEGIN
     -- Reset
-    reset <= '1';
+    reset <= '0';
+    start_of_frame <= '0';
+    end_of_frame <= '0';
+    data_in <= (OTHERS => '0');
     WAIT FOR 5 * CLK_PERIOD;
     WAIT UNTIL rising_edge(clk);
-    reset <= '0';
+    reset <= '1';
     WAIT UNTIL rising_edge(clk);
 
-    -- Test 1: valid
-    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in);
-    WAIT FOR 20 * CLK_PERIOD;
+    -- Test 1
+    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in, "packet 1");
+    WAIT FOR 4 * CLK_PERIOD;
 
-    -- Test 2: corrupt
-    send_frame(pkt_bad, clk, start_of_frame, end_of_frame, data_in);
-    WAIT FOR 20 * CLK_PERIOD;
+    -- Test 2
+    send_frame(pkt_bad, clk, start_of_frame, end_of_frame, data_in, "packet 2");
+    WAIT FOR 4 * CLK_PERIOD;
 
     -- Test 3: reset + valid again
-    reset <= '1';
+    reset <= '0';
     WAIT FOR 5 * CLK_PERIOD;
     WAIT UNTIL rising_edge(clk);
-    reset <= '0';
+    reset <= '1';
     WAIT UNTIL rising_edge(clk);
 
-    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in);
-    WAIT FOR 20 * CLK_PERIOD;
+    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in, "packet 3 after reset");
 
     WAIT;
   END PROCESS;
