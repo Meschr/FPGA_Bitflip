@@ -180,12 +180,11 @@ begin
 			wr_eof_in3   => eof_handler3,
 			wr_abort_in3 => fcs_error3,
 
-			out_data_0 => tx_data(7 downto 0),   -- Ausgabedaten Ausgang 0
-			out_data_1 => tx_data(15 downto 8),  -- Ausgabedaten Ausgang 1
-			out_data_2 => tx_data(23 downto 16), -- Ausgabedaten Ausgang 2
-			out_data_3 => tx_data(31 downto 24), -- Ausgabedaten Ausgang 3
+			out_data_0 => tx_data(7 downto 0),  
+			out_data_1 => tx_data(15 downto 8),  
+			out_data_2 => tx_data(23 downto 16), 
+			out_data_3 => tx_data(31 downto 24), 
 
-			-- Valid = '1': Ausgabedaten sind gueltig (mind. ein FIFO dieser Queue aktiv)
 			out_valid_0 => tx_ctrl(0),
 			out_valid_1 => tx_ctrl(1),
 			out_valid_2 => tx_ctrl(2),

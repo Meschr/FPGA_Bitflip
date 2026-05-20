@@ -12,12 +12,12 @@ entity mac_hash is
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
 
-        -- Eingaben
+        -- Inputs
         mac_in : in STD_LOGIC_VECTOR(47 downto 0);
         en     : in STD_LOGIC;
         ack    : in STD_LOGIC;
 
-        -- Ausgaben
+        -- Outputs
         hash_out : inout STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
         ready    : out STD_LOGIC
     );
@@ -46,29 +46,27 @@ begin
 
             case(state) is
                 when IDLE =>
-                -- Standardverhalten im Leerlauf
+                -- IDLE: hold registers and wait for enable
                 state <= IDLE;
                 mac_reg <= mac_reg;
                 crc_reg <= x"FFFF";
                 bit_counter <= to_unsigned(47, 6);
-                -- Ausgaben
                 hash_out <= hash_out;
                 ready <= '0';
 
                 if en = '1' then
                     state <= RUN;
-                    -- Neue MAC-Adresse laden und Berechnung starten
+                    -- Load new MAC address and start calculation
                     mac_reg <= mac_in;
                 end if;
 
                 when RUN =>
-                -- Standardverhalten im Laufen
+                -- RUN: process one bit per clock
                 state <= RUN;
                 mac_reg <= mac_reg;
-                -- Ausgaben
                 hash_out <= hash_out;
                 ready <= '0';
-                -- Verarbeite ein Bit pro Takt
+
                 feedback := mac_reg(to_integer(bit_counter)) xor crc_reg(15);
                 crc_next := crc_reg(14 downto 0) & '0';
                 if feedback = '1' then
@@ -77,12 +75,13 @@ begin
                 crc_reg <= crc_next;
 
                 if bit_counter = 0 then
-                    -- Berechnung fertig
+                    -- Calculation finished
                     state <= FIN;
                 else
                     bit_counter <= bit_counter - 1;
                 end if;
                 when FIN =>
+                -- FIN: present hash and wait for acknowledgement
                 bit_counter <= to_unsigned(47, 6);
                 if ack = '1' then
                     state <= IDLE;

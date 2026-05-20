@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 -- This component implements the orchestration of the round robin logic 
 -- behind reading with 4 different requesting entities (4 ports) from the mac table.
--- Each port can request a read, and when it is the port's turn, the  requested 
+-- Each port can request a read, and when it is the port's turn, the requested 
 -- destination is output, together with a valid signal. The valid signal is only asserted 
 -- if the counter stored in the first DATA_WIDTH-2 bits of the memory word is NOT 0. 
 -- If there is no valid destination present at the output of this entity, the packet 
@@ -16,12 +16,12 @@ use ieee.numeric_std.all;
 -- 0b11: port 3
 -- 
 -- Ports:
--- in  :
---     addrx  : the hash of the mac address requested, 16 bit crc, least signifiant ADDR_WIDTH bits as address
---     reqx   : requesting a read. assert at the same time as giving the address
--- out :
---     destx  : the destination the packet requesting with addrx should go
---     validx : wether the current destx is valid. has to be deasserted upon reqx assertion.
+-- Inputs:
+--     addrx  : the hash of the MAC address requested (16-bit CRC), use the least significant ADDR_WIDTH bits as address
+--     reqx   : request a read; assert together with the address
+-- Outputs:
+--     destx  : the destination the packet with addrx should go to
+--     validx : whether the current destx is valid; must be deasserted when reqx is asserted
 
 entity mac_read is
     generic (
@@ -34,7 +34,7 @@ entity mac_read is
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
 
-        -- Eingaben
+        -- Inputs
         addr0 : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
         req0  : in STD_LOGIC;
         addr1 : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
@@ -44,7 +44,7 @@ entity mac_read is
         addr3 : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
         req3  : in STD_LOGIC;
 
-        -- Ausgaben
+        -- Outputs
         dest0  : out STD_LOGIC_VECTOR(3 downto 0);
         valid0 : out STD_LOGIC;
         ack0   : out STD_LOGIC;

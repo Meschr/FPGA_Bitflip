@@ -4,19 +4,17 @@ use ieee.numeric_std.all;
 
 entity fcs_check_parallel is
   port (
-    -- inputs
     clk            : in STD_LOGIC;
-    reset          : in STD_LOGIC; -- async
-    start_of_frame : in STD_LOGIC; -- arrival of first byte
-    end_of_frame   : in STD_LOGIC; -- arrival of last byte
+    reset          : in STD_LOGIC;
+    start_of_frame : in STD_LOGIC;
+    end_of_frame   : in STD_LOGIC;
     data_in        : in STD_LOGIC_VECTOR(7 downto 0);
 
-    -- outputs
     fcs_error : out STD_LOGIC;
     fcs_ok    : out STD_LOGIC;
     data_out  : out STD_LOGIC_VECTOR(7 downto 0);
     wr_en     : out STD_LOGIC;
-    eof_out   : out STD_LOGIC -- synchronized EOF: high when end_of_frame aligns with data_out
+    eof_out   : out STD_LOGIC
   );
 end fcs_check_parallel;
 
@@ -34,9 +32,7 @@ begin
 
   bit_valid <= start_of_frame or checking;
 
-  ------------------------------------------------------------------
   -- Combinational CRC next-state (8 bits per cycle, MSB-first)
-  ------------------------------------------------------------------
   crc_comb : process (all)
     variable c        : STD_LOGIC_VECTOR(31 downto 0);
     variable feedback : STD_LOGIC;
@@ -44,14 +40,13 @@ begin
   begin
 
     if bit_valid = '1' then
-      -- keep your existing inversion policy
       if (head_cnt < 4) then
         din_eff := not data_in;
       else
         din_eff := data_in;
       end if;
 
-      -- start from current/base CRC value
+      -- start from current CRC value
       c := crc_reg;
 
       -- apply 8 serial bit-steps in one combinational block (MSB-first)
@@ -65,13 +60,9 @@ begin
     else --
       c := (others => '0');
     end if;
-    -- output of this combinational logic
     crc_next <= c;
   end process;
 
-  ------------------------------------------------------------------
-  -- Sequential control + registers
-  ------------------------------------------------------------------
   seq : process (all)
   begin
     if reset = '0' then
@@ -83,12 +74,11 @@ begin
 
     elsif rising_edge(clk) then
 
-      fcs_error <= '0'; -- default
-      fcs_ok    <= '0'; -- default
+      fcs_error <= '0';
+      fcs_ok    <= '0';
 
-      data_out <= data_in; -- passthrough of input data
+      data_out <= data_in;
 
-      -- Start-of-frame sets control state, but does NOT block processing the bit
       if start_of_frame = '1' then
         checking  <= '1';
         fcs_error <= '0';
@@ -96,13 +86,10 @@ begin
         head_cnt  <= (others => '0');
       end if;
 
-      -- Process bytes while stream is active.
       if bit_valid = '1' then
-        -- end_of_frame marks data_valid falling edge from parser,
-        -- so crc_reg already contains the CRC after the last valid byte.
-
-        wr_en    <= not end_of_frame; -- valid data output until end_of_frame
-        data_out <= data_in;          -- passthrough of input data
+        
+        wr_en    <= not end_of_frame;
+        data_out <= data_in;
 
         if end_of_frame = '1' then
           if crc_reg = x"C704DD7B" then

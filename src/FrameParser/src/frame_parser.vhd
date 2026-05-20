@@ -4,32 +4,30 @@ use ieee.numeric_std.all;
 
 entity frame_parser is
   port (
-    clk   : in STD_LOGIC; --  clock input for synchronizing the frame parsing process
-    reset : in STD_LOGIC; -- async reset
+    clk   : in STD_LOGIC;
+    reset : in STD_LOGIC;
 
-    -- Byte-stream input
-    data_in    : in STD_LOGIC_VECTOR(7 downto 0); -- 8-bit data bus
-    data_valid : in STD_LOGIC;                    -- Indicates that the data on data_in is valid
+    data_in    : in STD_LOGIC_VECTOR(7 downto 0);
+    data_valid : in STD_LOGIC;
 
-    -- Output 
-    data_out : out STD_LOGIC_VECTOR(7 downto 0); -- 8-bit data bus 
-    sof      : out STD_LOGIC;                    -- Start-of-frame pulse
-    eof      : out STD_LOGIC;                    -- End-of-frame pulse end of payload --> fcs follows
+    data_out : out STD_LOGIC_VECTOR(7 downto 0);
+    sof      : out STD_LOGIC;
+    eof      : out STD_LOGIC;
 
     dst_mac   : inout STD_LOGIC_VECTOR(47 downto 0); -- Destination MAC address
-    dst_valid : out STD_LOGIC;                       -- Destination MAC valid, pulse when dst_mac is valid and can be used for MAC learning
+    dst_valid : out STD_LOGIC;                       -- Destination MAC valid
     src_mac   : inout STD_LOGIC_VECTOR(47 downto 0); -- Source MAC address
-    src_valid : out STD_LOGIC                        -- Source MAC valid, pulse when src_mac is valid and can be used for MAC learning
+    src_valid : out STD_LOGIC                        -- Source MAC valid
   );
 end entity frame_parser;
 
 architecture rtl of frame_parser is
   type state_t is (ERR, PREAMBLE, SFD, DST, SRC, ETHER_PAYLOAD_FCS); -- State machine states for parsing the Ethernet frame
 
-  signal state : state_t; -- State variable to track the current stage of frame parsing
+  signal state : state_t; 
 
   signal ether_byte_0    : STD_LOGIC_VECTOR(7 downto 0); -- Temporary storage for first EtherType byte
-  signal byte_cnt        : INTEGER range 0 to 1500;      -- Shared byte counter (uses up to 6 during preamble detection)
+  signal byte_cnt        : INTEGER range 0 to 2047;      
   signal data_valid_prev : STD_LOGIC;                    -- Previous data_valid value for falling-edge detection
 
 begin
@@ -69,19 +67,19 @@ begin
           when PREAMBLE => -- Expecting 7 bytes of preamble (0x55). After receiving 7 bytes, expect SFD (0xD5).
             if not data_in = x"55" then
               state <= ERR;
-            elsif byte_cnt = 6 then -- Seventh preamble byte received, next byte must be SFD.
+            elsif byte_cnt = 6 then 
               state    <= SFD;
-              data_out <= data_in; -- Forward preamble bytes to FCS checker
+              data_out <= data_in; 
             else
-              data_out <= data_in; -- Forward preamble bytes to FCS checker
+              data_out <= data_in; 
               state    <= PREAMBLE;
             end if;
 
-          when SFD => -- Expecting the Start of Frame Delimiter (SFD) which should be 0xD5.
+          when SFD => -- Expecting the Start of Frame Delimiter (SFD) 0xD5.
             if data_in = x"D5" then
               data_out <= data_in;
               state    <= DST;
-            else -- If we receive a byte that is not 0xD5, its error
+            else 
               state <= ERR;
             end if;
 
@@ -89,7 +87,7 @@ begin
             data_out <= data_in;
 
             if byte_cnt = 8 then
-              sof <= '1'; -- Pulse SOF when the first byte of the destination MAC is received
+              sof <= '1'; 
             end if;
 
             case byte_cnt is
@@ -125,8 +123,7 @@ begin
               state     <= ETHER_PAYLOAD_FCS;
             end if;
 
-          when ETHER_PAYLOAD_FCS =>
-            -- Forward bytes while data_valid is high.
+          when ETHER_PAYLOAD_FCS =>            
             data_out <= data_in;
             byte_cnt <= byte_cnt + 1;
             if byte_cnt > 1526 then

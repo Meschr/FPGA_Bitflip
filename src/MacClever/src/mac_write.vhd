@@ -38,7 +38,7 @@ entity mac_write is
         clk : in STD_LOGIC;
         rst : in STD_LOGIC;
 
-        -- Eingaben
+        -- Inputs
         addr0  : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
         req0   : in STD_LOGIC;
         valid0 : in STD_LOGIC;
@@ -52,7 +52,7 @@ entity mac_write is
         req3   : in STD_LOGIC;
         valid3 : in STD_LOGIC;
 
-        -- Ausgaben
+        -- Outputs
         ack0 : out STD_LOGIC;
         ack1 : out STD_LOGIC;
         ack2 : out STD_LOGIC;
