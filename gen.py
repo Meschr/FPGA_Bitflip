@@ -18,7 +18,7 @@ files = sorted(
 )
 
 with OUTPUT_FILE.open("w", encoding="utf-8") as tex:
-
+    tex.write("\\UseRawInputEncoding\n")
     tex.write("% Auto-generated appendix listings\n\n")
     tex.write("\\section{Source Files}\n\n")
 
@@ -27,13 +27,7 @@ with OUTPUT_FILE.open("w", encoding="utf-8") as tex:
         label = make_label(file)
 
         tex.write(
-            f"""\\lstinputlisting[
-                style={style},
-                caption={{{file.name}}},
-                label={{{label}}}
-            ]{{{file.as_posix()}}}
-
-            """
+            f"""\\lstinputlisting[style={style}, caption={{{file.name.replace("_","\\_")}}}, label={{{label}}}]{{{file.as_posix()}}}\n\n"""
         )
 
 print(f"Generated {OUTPUT_FILE}")

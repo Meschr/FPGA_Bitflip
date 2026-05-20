@@ -70,26 +70,26 @@ architecture rtl of mac_read is
     signal state, state_next : state_t;
 
     function to_onehot(sel : STD_LOGIC_VECTOR(1 downto 0)) return STD_LOGIC_VECTOR is
-        variable oh            : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+        variable oh : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
     begin
         case sel is
-            when "00"   => oh   := "0001";
-            when "01"   => oh   := "0010";
-            when "10"   => oh   := "0100";
+            when "00" => oh := "0001";
+            when "01" => oh := "0010";
+            when "10" => oh := "0100";
             when others => oh := "1000";
         end case;
         return oh;
     end function;
 
     signal raddr_next : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-    signal ren_next   : STD_LOGIC;
+    signal ren_next : STD_LOGIC;
 
-    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg         : STD_LOGIC_VECTOR(3 downto 0);
-    signal dest0_next, dest1_next, dest2_next, dest3_next     : STD_LOGIC_VECTOR(3 downto 0);
-    signal valid0_reg, valid1_reg, valid2_reg, valid3_reg     : STD_LOGIC := '0';
+    signal dest0_reg, dest1_reg, dest2_reg, dest3_reg : STD_LOGIC_VECTOR(3 downto 0);
+    signal dest0_next, dest1_next, dest2_next, dest3_next : STD_LOGIC_VECTOR(3 downto 0);
+    signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : STD_LOGIC := '0';
     signal valid0_next, valid1_next, valid2_next, valid3_next : STD_LOGIC;
-    signal ack0_reg, ack1_reg, ack2_reg, ack3_reg             : STD_LOGIC;
-    signal ack0_next, ack1_next, ack2_next, ack3_next         : STD_LOGIC;
+    signal ack0_reg, ack1_reg, ack2_reg, ack3_reg : STD_LOGIC;
+    signal ack0_next, ack1_next, ack2_next, ack3_next : STD_LOGIC;
 
 begin
 
@@ -99,21 +99,21 @@ begin
         valid0_reg, valid1_reg, valid2_reg, valid3_reg)
     begin
         -- defaults
-        state_next  <= state;
-        raddr_next  <= (others => '0');
-        ren_next    <= '0';
-        dest0_next  <= dest0_reg;
-        dest1_next  <= dest1_reg;
-        dest2_next  <= dest2_reg;
-        dest3_next  <= dest3_reg;
+        state_next <= state;
+        raddr_next <= (others => '0');
+        ren_next <= '0';
+        dest0_next <= dest0_reg;
+        dest1_next <= dest1_reg;
+        dest2_next <= dest2_reg;
+        dest3_next <= dest3_reg;
         valid0_next <= valid0_reg;
         valid1_next <= valid1_reg;
         valid2_next <= valid2_reg;
         valid3_next <= valid3_reg;
-        ack0_next   <= '0';
-        ack1_next   <= '0';
-        ack2_next   <= '0';
-        ack3_next   <= '0';
+        ack0_next <= '0';
+        ack1_next <= '0';
+        ack2_next <= '0';
+        ack3_next <= '0';
 
         case state is
             when ZERO =>
@@ -121,15 +121,15 @@ begin
                 valid0_next <= '0';
                 if req0 = '1' then
                     raddr_next <= addr0;
-                    ren_next   <= '1';
+                    ren_next <= '1';
                     state_next <= ZERO_WAIT;
                 end if;
             when ZERO_WAIT =>
                 -- read data available this cycle
                 state_next <= ZERO_OUT;
-                ack0_next  <= '1';
+                ack0_next <= '1';
             when ZERO_OUT =>
-                state_next  <= ONE;
+                state_next <= ONE;
                 valid0_next <= '1';
                 if unsigned(rdata(DATA_WIDTH - 1 downto 2)) = 0 then
                     dest0_next <= "1110";
@@ -141,14 +141,14 @@ begin
                 valid1_next <= '0';
                 if req1 = '1' then
                     raddr_next <= addr1;
-                    ren_next   <= '1';
+                    ren_next <= '1';
                     state_next <= ONE_WAIT;
                 end if;
             when ONE_WAIT =>
                 state_next <= ONE_OUT;
-                ack1_next  <= '1';
+                ack1_next <= '1';
             when ONE_OUT =>
-                state_next  <= TWO;
+                state_next <= TWO;
                 valid1_next <= '1';
                 if unsigned(rdata(DATA_WIDTH - 1 downto 2)) = 0 then
                     dest1_next <= "1101";
@@ -160,14 +160,14 @@ begin
                 valid2_next <= '0';
                 if req2 = '1' then
                     raddr_next <= addr2;
-                    ren_next   <= '1';
+                    ren_next <= '1';
                     state_next <= TWO_WAIT;
                 end if;
             when TWO_WAIT =>
                 state_next <= TWO_OUT;
-                ack2_next  <= '1';
+                ack2_next <= '1';
             when TWO_OUT =>
-                state_next  <= THREE;
+                state_next <= THREE;
                 valid2_next <= '1';
                 if unsigned(rdata(DATA_WIDTH - 1 downto 2)) = 0 then
                     dest2_next <= "1011";
@@ -179,14 +179,14 @@ begin
                 valid3_next <= '0';
                 if req3 = '1' then
                     raddr_next <= addr3;
-                    ren_next   <= '1';
+                    ren_next <= '1';
                     state_next <= THREE_WAIT;
                 end if;
             when THREE_WAIT =>
                 state_next <= THREE_OUT;
-                ack3_next  <= '1';
+                ack3_next <= '1';
             when THREE_OUT =>
-                state_next  <= ZERO;
+                state_next <= ZERO;
                 valid3_next <= '1';
                 if unsigned(rdata(DATA_WIDTH - 1 downto 2)) = 0 then
                     dest3_next <= "0111";
@@ -202,38 +202,38 @@ begin
         ack0_next, ack1_next, ack2_next, ack3_next)
     begin
         if rst = '0' then
-            state      <= ZERO;
-            raddr      <= (others => '0');
-            ren        <= '0';
-            dest0_reg  <= (others => '0');
-            dest1_reg  <= (others => '0');
-            dest2_reg  <= (others => '0');
-            dest3_reg  <= (others => '0');
+            state <= ZERO;
+            raddr <= (others => '0');
+            ren <= '0';
+            dest0_reg <= (others => '0');
+            dest1_reg <= (others => '0');
+            dest2_reg <= (others => '0');
+            dest3_reg <= (others => '0');
             valid0_reg <= '0';
             valid1_reg <= '0';
             valid2_reg <= '0';
             valid3_reg <= '0';
-            ack0_reg   <= '0';
-            ack1_reg   <= '0';
-            ack2_reg   <= '0';
-            ack3_reg   <= '0';
+            ack0_reg <= '0';
+            ack1_reg <= '0';
+            ack2_reg <= '0';
+            ack3_reg <= '0';
 
         elsif rising_edge(clk) then
-            state      <= state_next;
-            raddr      <= raddr_next;
-            ren        <= ren_next;
-            dest0_reg  <= dest0_next;
-            dest1_reg  <= dest1_next;
-            dest2_reg  <= dest2_next;
-            dest3_reg  <= dest3_next;
+            state <= state_next;
+            raddr <= raddr_next;
+            ren <= ren_next;
+            dest0_reg <= dest0_next;
+            dest1_reg <= dest1_next;
+            dest2_reg <= dest2_next;
+            dest3_reg <= dest3_next;
             valid0_reg <= valid0_next;
             valid1_reg <= valid1_next;
             valid2_reg <= valid2_next;
             valid3_reg <= valid3_next;
-            ack0_reg   <= ack0_next;
-            ack1_reg   <= ack1_next;
-            ack2_reg   <= ack2_next;
-            ack3_reg   <= ack3_next;
+            ack0_reg <= ack0_next;
+            ack1_reg <= ack1_next;
+            ack2_reg <= ack2_next;
+            ack3_reg <= ack3_next;
         end if;
     end process round_robin_seq;
 

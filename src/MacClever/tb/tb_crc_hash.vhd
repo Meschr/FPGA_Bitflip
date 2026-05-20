@@ -1,11 +1,11 @@
 -- ============================================================
 --  Testbench: mac_hash (CRC16-Basiertes Hashing)
---  Prüft:
+--  PrÃ¼ft:
 --    1. Bekannte MAC -> erwarteter Hash (Goldene Referenzwerte)
 --    2. Verschiedene MACs -> verschiedene Hash-Werte (Kollisionsrate)
 --    3. Gleiche MAC -> immer gleicher Hash (Determinismus)
 --    4. Broadcast / Multicast / Null-MAC Sonderfalle
---    5. Kollisionsstatistik über 20 zufallige MACs
+--    5. Kollisionsstatistik Ã¼ber 20 zufallige MACs
 -- ============================================================
 
 library IEEE;

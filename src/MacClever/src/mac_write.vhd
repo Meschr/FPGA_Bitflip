@@ -69,26 +69,26 @@ end mac_write;
 
 architecture rtl of mac_write is
     signal ack0_sig, ack1_sig, ack2_sig, ack3_sig, ackcnt : STD_LOGIC;
-    signal reqcnt                                         : STD_LOGIC;
+    signal reqcnt : STD_LOGIC;
     signal valid0_reg, valid1_reg, valid2_reg, valid3_reg : STD_LOGIC;
-    signal reqcnt_reg                                     : STD_LOGIC;
-    signal forget_rate_limit                              : unsigned(FORGET_CNT - 1 downto 0);
-    signal expiry_addr                                    : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal reqcnt_reg : STD_LOGIC;
+    signal forget_rate_limit : unsigned(FORGET_CNT - 1 downto 0);
+    signal expiry_addr : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
 
     type state_t is (ZERO, ONE, TWO, THREE, COUNTER_R, COUNTER_W, COUNTER_WAIT0);
     signal round_robin, round_robin_next : state_t;
 
-    signal addr_next  : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal addr_next : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
     signal wdata_next : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
-    signal wen_next   : STD_LOGIC;
-    signal ren_next   : STD_LOGIC;
+    signal wen_next : STD_LOGIC;
+    signal ren_next : STD_LOGIC;
 
 begin
     ack0 <= ack0_sig;
     ack1 <= ack1_sig;
     ack2 <= ack2_sig;
     ack3 <= ack3_sig;
-    expiry_ratelimiter : process(all)
+    expiry_ratelimiter : process (all)
     begin
         if rst = '0' then
             forget_rate_limit <= (others => '0');
@@ -102,7 +102,7 @@ begin
         end if;
     end process expiry_ratelimiter;
 
-    expiry_addr_counter : process(all)
+    expiry_addr_counter : process (all)
     begin
         if rst = '0' then
             expiry_addr <= (others => '0');
@@ -115,56 +115,56 @@ begin
         end if;
     end process expiry_addr_counter;
 
-    round_robin_comb : process(all)
+    round_robin_comb : process (all)
     begin
         round_robin_next <= ZERO;
-        addr_next        <= (others => '0');
-        wen_next         <= '0';
-        ren_next         <= '0';
-        wdata_next       <= "00000000";
-        ack0_sig         <= '0';
-        ack1_sig         <= '0';
-        ack2_sig         <= '0';
-        ack3_sig         <= '0';
-        ackcnt           <= '0';
+        addr_next <= (others => '0');
+        wen_next <= '0';
+        ren_next <= '0';
+        wdata_next <= "00000000";
+        ack0_sig <= '0';
+        ack1_sig <= '0';
+        ack2_sig <= '0';
+        ack3_sig <= '0';
+        ackcnt <= '0';
 
         case(round_robin) is
             when ZERO =>
             round_robin_next <= ONE;
             if req0 and valid0_reg then
-                addr_next  <= addr0;
-                wen_next   <= '1';
+                addr_next <= addr0;
+                wen_next <= '1';
                 wdata_next <= "11111100";
-                ack0_sig   <= '1';
+                ack0_sig <= '1';
             end if;
             when ONE =>
             round_robin_next <= TWO;
             if req1 and valid1_reg then
-                addr_next  <= addr1;
-                wen_next   <= '1';
+                addr_next <= addr1;
+                wen_next <= '1';
                 wdata_next <= "11111101";
-                ack1_sig   <= '1';
+                ack1_sig <= '1';
             end if;
             when TWO =>
             round_robin_next <= THREE;
             if req2 and valid2_reg then
-                addr_next  <= addr2;
-                wen_next   <= '1';
+                addr_next <= addr2;
+                wen_next <= '1';
                 wdata_next <= "11111110";
-                ack2_sig   <= '1';
+                ack2_sig <= '1';
             end if;
             when THREE =>
             round_robin_next <= COUNTER_R;
             if req3 and valid3_reg then
-                addr_next  <= addr3;
-                wen_next   <= '1';
+                addr_next <= addr3;
+                wen_next <= '1';
                 wdata_next <= "11111111";
-                ack3_sig   <= '1';
+                ack3_sig <= '1';
             end if;
             when COUNTER_R =>
             if reqcnt_reg then
-                addr_next        <= expiry_addr;
-                ren_next         <= '1';
+                addr_next <= expiry_addr;
+                ren_next <= '1';
                 round_robin_next <= COUNTER_WAIT0;
             else
                 round_robin_next <= ZERO;
@@ -173,33 +173,33 @@ begin
             round_robin_next <= COUNTER_W;
             when COUNTER_W =>
             round_robin_next <= ZERO;
-            ackcnt           <= '1';
+            ackcnt <= '1';
             if unsigned(rdata(DATA_WIDTH - 1 downto 2)) /= 0 then
-                addr_next  <= expiry_addr;
-                wen_next   <= '1';
+                addr_next <= expiry_addr;
+                wen_next <= '1';
                 wdata_next <= STD_LOGIC_VECTOR(unsigned(rdata(DATA_WIDTH - 1 downto 2)) - 1) & rdata(1 downto 0);
             end if;
         end case;
     end process round_robin_comb;
 
-    round_robin_seq : process(all)
+    round_robin_seq : process (all)
     begin
         if rst = '0' then
             round_robin <= ZERO;
-            addr        <= (others => '0');
-            wen         <= '0';
-            ren         <= '0';
-            wdata       <= (others => '0');
+            addr <= (others => '0');
+            wen <= '0';
+            ren <= '0';
+            wdata <= (others => '0');
         elsif rising_edge(clk) then
             round_robin <= round_robin_next;
-            addr        <= addr_next;
-            wen         <= wen_next;
-            ren         <= ren_next;
-            wdata       <= wdata_next;
+            addr <= addr_next;
+            wen <= wen_next;
+            ren <= ren_next;
+            wdata <= wdata_next;
         end if;
     end process round_robin_seq;
 
-    buffers : process(all)
+    buffers : process (all)
     begin
         if rst = '0' then
             valid0_reg <= '0';

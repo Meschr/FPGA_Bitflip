@@ -19,7 +19,7 @@ entity crc_to_voq_buffer is
         wr_eof         : in STD_LOGIC;
         crc_valid      : in STD_LOGIC;                    -- '1' wenn dies das letzte Byte des Frames ist
         dest_port      : in STD_LOGIC_VECTOR(3 downto 0); -- Zielport des aktuellen Frames (nur gueltig bei wr_eof='1')                  
-        dest_port_flag : in STD_LOGIC;                    -- '1' wenn dest_port gültig ist (nur bei wr_eof='1')
+        dest_port_flag : in STD_LOGIC;                    -- '1' wenn dest_port gÃ¼ltig ist (nur bei wr_eof='1')
 
         -- -----------------------------------------------------------------
         -- Leseseite: Synchrones Lesen mit rd_valid-Flag
@@ -93,7 +93,7 @@ begin
     crc_valid_out <= '1' when (rd_valid_reg = '1' and eof = '1' and crc_valid = '1') else
         '0'; ---TBD NOCH nicht fertig
 
-    write_proc : process(all)
+    write_proc : process (all)
     begin
         if rising_edge(clk) then
             if can_write = '1' then
@@ -103,7 +103,7 @@ begin
         end if;
     end process write_proc;
 
-    read_proc : process(all)
+    read_proc : process (all)
     begin
         if rising_edge(clk) then
             if can_read = '1' then
@@ -120,7 +120,7 @@ begin
     rd_eof <= rd_reg(8) and rd_valid_reg; -- Bit 8 = EOF-Flag
     eof    <= rd_reg(8) and rd_valid_reg;
 
-    ptr_proc : process(all)
+    ptr_proc : process (all)
         variable count_next : unsigned(count'range);
     begin
 

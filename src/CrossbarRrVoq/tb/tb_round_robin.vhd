@@ -1,146 +1,146 @@
 -------------------------------------------------------------------------------
 -- tb_round_robin.vhd
--- Testbench f¸r Round-Robin Arbiter mit Frame-Lock
+-- Testbench f√ºr Round-Robin Arbiter mit Frame-Lock
 --
 -- Tests:
 --   1. Reset: alles idle
---   2. Ein Eingang bereit: wird sofort gew‰hlt
---   3. Frame-Lock: sel bleibt stabil w‰hrend Frame l‰uft
---   4. Nach EOF: Pointer dreht weiter, n‰chster wird gew‰hlt
+--   2. Ein Eingang bereit: wird sofort gew√§hlt
+--   3. Frame-Lock: sel bleibt stabil w√§hrend Frame l√§uft
+--   4. Nach EOF: Pointer dreht weiter, n√§chster wird gew√§hlt
 --   5. Fairness: bei dauerhafter Konkurrenz rotiert der Gewinner
 --   6. Kein frame_rdy: bleibt in IDLE
---   7. Priorit‰t springt korrekt (Pointer-Wrap von 3 auf 0)
+--   7. Priorit√§t springt korrekt (Pointer-Wrap von 3 auf 0)
 -------------------------------------------------------------------------------
 
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
 
-ENTITY tb_round_robin IS
-END ENTITY tb_round_robin;
+entity tb_round_robin is
+end entity tb_round_robin;
 
-ARCHITECTURE sim OF tb_round_robin IS
+architecture sim of tb_round_robin is
 
-    CONSTANT CLK_PERIOD : TIME := 8 ns;
+    constant CLK_PERIOD : TIME := 8 ns;
 
-    SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '1';
-    SIGNAL frame_rdy : STD_LOGIC_VECTOR(3 DOWNTO 0);
-    SIGNAL eof : STD_LOGIC;
-    SIGNAL sel : STD_LOGIC_VECTOR(1 DOWNTO 0);
-    SIGNAL grant : STD_LOGIC_VECTOR(3 DOWNTO 0);
-    SIGNAL active : STD_LOGIC;
+    signal clk       : STD_LOGIC := '0';
+    signal reset     : STD_LOGIC := '1';
+    signal frame_rdy : STD_LOGIC_VECTOR(3 downto 0);
+    signal eof       : STD_LOGIC;
+    signal sel       : STD_LOGIC_VECTOR(1 downto 0);
+    signal grant     : STD_LOGIC_VECTOR(3 downto 0);
+    signal active    : STD_LOGIC;
 
-BEGIN
+begin
 
-    clk <= NOT clk AFTER CLK_PERIOD / 2;
+    clk <= not clk after CLK_PERIOD / 2;
 
-    dut : ENTITY work.round_robin
-        PORT MAP(
-            clk => clk,
-            reset => reset,
+    dut : entity work.round_robin
+        port map(
+            clk       => clk,
+            reset     => reset,
             frame_rdy => frame_rdy,
-            eof => eof,
-            sel => sel,
-            grant => grant,
-            active => active
+            eof       => eof,
+            sel       => sel,
+            grant     => grant,
+            active    => active
         );
 
-    stim : PROCESS
-        PROCEDURE wait_gap IS
-        BEGIN
-            FOR i IN 1 TO 10 LOOP
-                WAIT FOR CLK_PERIOD;
-                WAIT FOR 1 ns;
-                ASSERT active = '0'
-                REPORT "GAP FAIL: active sollte 0 bleiben" SEVERITY error;
-                ASSERT grant = "0000"
-                REPORT "GAP FAIL: grant sollte 0000 bleiben" SEVERITY error;
-            END LOOP;
-        END PROCEDURE;
-    BEGIN
+    stim : process
+        procedure wait_gap is
+        begin
+            for i in 1 to 10 loop
+                wait for CLK_PERIOD;
+                wait for 1 ns;
+                assert active = '0'
+                report "GAP FAIL: active sollte 0 bleiben" severity error;
+                assert grant = "0000"
+                report "GAP FAIL: grant sollte 0000 bleiben" severity error;
+            end loop;
+        end procedure;
+    begin
         frame_rdy <= "0000";
-        eof <= '0';
+        eof       <= '0';
 
         -----------------------------------------------------------------------
         -- TEST 1: Reset
         -----------------------------------------------------------------------
         reset <= '0';
-        WAIT FOR CLK_PERIOD * 3;
+        wait for CLK_PERIOD * 3;
         reset <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT active = '0'
-        REPORT "T1 FAIL: active nach Reset" SEVERITY error;
-        ASSERT grant = "0000"
-        REPORT "T1 FAIL: grant nach Reset" SEVERITY error;
-        REPORT "TEST 1 PASSED: Reset";
+        assert active = '0'
+        report "T1 FAIL: active nach Reset" severity error;
+        assert grant = "0000"
+        report "T1 FAIL: grant nach Reset" severity error;
+        report "TEST 1 PASSED: Reset";
 
         -----------------------------------------------------------------------
         -- TEST 2: Nur Eingang 0 hat Frame bereit
         -----------------------------------------------------------------------
         frame_rdy <= "0001";
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "00"
-        REPORT "T2 FAIL: sel sollte 00 sein" SEVERITY error;
-        ASSERT grant = "0001"
-        REPORT "T2 FAIL: grant sollte 0001 sein" SEVERITY error;
-        ASSERT active = '1'
-        REPORT "T2 FAIL: active sollte 1 sein" SEVERITY error;
-        REPORT "TEST 2 PASSED: Eingang 0 gew‰hlt";
+        assert sel = "00"
+        report "T2 FAIL: sel sollte 00 sein" severity error;
+        assert grant = "0001"
+        report "T2 FAIL: grant sollte 0001 sein" severity error;
+        assert active = '1'
+        report "T2 FAIL: active sollte 1 sein" severity error;
+        report "TEST 2 PASSED: Eingang 0 gew√§hlt";
 
         -----------------------------------------------------------------------
-        -- TEST 3: Frame-Lock ? sel bleibt stabil ¸ber mehrere Takte
+        -- TEST 3: Frame-Lock ? sel bleibt stabil √ºber mehrere Takte
         -- Simuliere einen kurzen Frame (5 Bytes)
         -----------------------------------------------------------------------
-        frame_rdy <= "1111"; -- andere wollen auch, aber Lock h‰lt
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
-        ASSERT sel = "00"
-        REPORT "T3a FAIL: sel muss 00 bleiben (locked)" SEVERITY error;
+        frame_rdy <= "1111"; -- andere wollen auch, aber Lock h√§lt
+        wait for CLK_PERIOD;
+        wait for 1 ns;
+        assert sel = "00"
+        report "T3a FAIL: sel muss 00 bleiben (locked)" severity error;
 
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
-        ASSERT sel = "00"
-        REPORT "T3b FAIL: sel muss 00 bleiben" SEVERITY error;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
+        assert sel = "00"
+        report "T3b FAIL: sel muss 00 bleiben" severity error;
 
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
-        ASSERT sel = "00"
-        REPORT "T3c FAIL: sel muss 00 bleiben" SEVERITY error;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
+        assert sel = "00"
+        report "T3c FAIL: sel muss 00 bleiben" severity error;
 
         -- Letztes Byte: EOF
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
 
-        ASSERT active = '0'
-        REPORT "T3 FAIL: active sollte nach EOF 0 sein" SEVERITY error;
+        assert active = '0'
+        report "T3 FAIL: active sollte nach EOF 0 sein" severity error;
         wait_gap;
-        REPORT "TEST 3 PASSED: Frame-Lock h‰lt";
+        report "TEST 3 PASSED: Frame-Lock h√§lt";
 
         -----------------------------------------------------------------------
         -- TEST 4: Nach EOF + Gap dreht Pointer weiter
         -- Pointer war auf 0, Gewinner war 0, also jetzt ptr=1
-        -- Bei frame_rdy="1111" sollte Eingang 1 gew‰hlt werden
+        -- Bei frame_rdy="1111" sollte Eingang 1 gew√§hlt werden
         -----------------------------------------------------------------------
         frame_rdy <= "1111";
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "01"
-        REPORT "T4 FAIL: sel sollte 01 sein (ptr=1)" SEVERITY error;
-        ASSERT grant = "0010"
-        REPORT "T4 FAIL: grant sollte 0010 sein" SEVERITY error;
-        REPORT "TEST 4 PASSED: Pointer dreht zu Eingang 1";
+        assert sel = "01"
+        report "T4 FAIL: sel sollte 01 sein (ptr=1)" severity error;
+        assert grant = "0010"
+        report "T4 FAIL: grant sollte 0010 sein" severity error;
+        report "TEST 4 PASSED: Pointer dreht zu Eingang 1";
 
         -- Frame beenden
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
         wait_gap;
 
@@ -149,47 +149,47 @@ BEGIN
         -- Nach Eingang 1: ptr=2, also Eingang 2
         -----------------------------------------------------------------------
         frame_rdy <= "1111";
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "10"
-        REPORT "T5a FAIL: sel sollte 10 sein" SEVERITY error;
-        REPORT "TEST 5a: Eingang 2 gew‰hlt";
+        assert sel = "10"
+        report "T5a FAIL: sel sollte 10 sein" severity error;
+        report "TEST 5a: Eingang 2 gew√§hlt";
 
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
         wait_gap;
 
         -- Jetzt ptr=3, also Eingang 3
         frame_rdy <= "1111";
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "11"
-        REPORT "T5b FAIL: sel sollte 11 sein" SEVERITY error;
-        REPORT "TEST 5b: Eingang 3 gew‰hlt";
+        assert sel = "11"
+        report "T5b FAIL: sel sollte 11 sein" severity error;
+        report "TEST 5b: Eingang 3 gew√§hlt";
 
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
         wait_gap;
 
         -- Jetzt ptr=0, Wrap ? wieder Eingang 0
         frame_rdy <= "1111";
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "00"
-        REPORT "T5c FAIL: sel sollte 00 sein (Wrap)" SEVERITY error;
-        REPORT "TEST 5c: Wrap - Eingang 0 wieder dran";
-        REPORT "TEST 5 PASSED: Fairness / Rotation komplett";
+        assert sel = "00"
+        report "T5c FAIL: sel sollte 00 sein (Wrap)" severity error;
+        report "TEST 5c: Wrap - Eingang 0 wieder dran";
+        report "TEST 5 PASSED: Fairness / Rotation komplett";
 
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
         wait_gap;
 
@@ -197,38 +197,38 @@ BEGIN
         -- TEST 6: Kein frame_rdy ? bleibt IDLE
         -----------------------------------------------------------------------
         frame_rdy <= "0000";
-        WAIT FOR CLK_PERIOD * 3;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD * 3;
+        wait for 1 ns;
 
-        ASSERT active = '0'
-        REPORT "T6 FAIL: sollte IDLE bleiben" SEVERITY error;
-        ASSERT grant = "0000"
-        REPORT "T6 FAIL: kein grant ohne frame_rdy" SEVERITY error;
-        REPORT "TEST 6 PASSED: Bleibt IDLE ohne Anfrage";
+        assert active = '0'
+        report "T6 FAIL: sollte IDLE bleiben" severity error;
+        assert grant = "0000"
+        report "T6 FAIL: kein grant ohne frame_rdy" severity error;
+        report "TEST 6 PASSED: Bleibt IDLE ohne Anfrage";
 
         -----------------------------------------------------------------------
         -- TEST 7: Nur Eingang 3 bereit, Pointer steht auf 1
-        -- RR soll ¸ber 1?2?3 suchen und 3 finden
+        -- RR soll √ºber 1?2?3 suchen und 3 finden
         -----------------------------------------------------------------------
         frame_rdy <= "1000"; -- nur Eingang 3
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
 
-        ASSERT sel = "11"
-        REPORT "T7 FAIL: sel sollte 11 sein" SEVERITY error;
-        ASSERT grant = "1000"
-        REPORT "T7 FAIL: grant sollte 1000 sein" SEVERITY error;
-        REPORT "TEST 7 PASSED: ‹berspringt leere Eing‰nge";
+        assert sel = "11"
+        report "T7 FAIL: sel sollte 11 sein" severity error;
+        assert grant = "1000"
+        report "T7 FAIL: grant sollte 1000 sein" severity error;
+        report "TEST 7 PASSED: √úberspringt leere Eing√§nge";
 
         eof <= '1';
-        WAIT FOR CLK_PERIOD;
-        WAIT FOR 1 ns;
+        wait for CLK_PERIOD;
+        wait for 1 ns;
         eof <= '0';
         wait_gap;
 
         -----------------------------------------------------------------------
-        REPORT "ALLE TESTS ABGESCHLOSSEN";
-        WAIT;
-    END PROCESS stim;
+        report "ALLE TESTS ABGESCHLOSSEN";
+        wait;
+    end process stim;
 
-END ARCHITECTURE sim;
+end architecture sim;
