@@ -42,8 +42,8 @@ architecture rtl of frame_handler is
 begin
 
     buffer_flush <= fcs_error_int;
-    crc_valid <= fcs_ok_int;
-    fcs_error <= fcs_error_int;
+    crc_valid    <= fcs_ok_int;
+    fcs_error    <= fcs_error_int;
 
     u_frameparser : entity work.frame_parser
         port map(

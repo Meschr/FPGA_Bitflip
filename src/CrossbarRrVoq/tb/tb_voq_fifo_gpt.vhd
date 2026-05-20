@@ -39,347 +39,347 @@
 --              | - Neues Frame wird vervollstaendigt und korrekt ausgelesen
 -- =============================================================================
 
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-USE ieee.numeric_std.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-ENTITY tb_voq_fifo_gpt IS
-END ENTITY tb_voq_fifo_gpt;
+entity tb_voq_fifo_gpt is
+end entity tb_voq_fifo_gpt;
 
-ARCHITECTURE sim OF tb_voq_fifo_gpt IS
+architecture sim of tb_voq_fifo_gpt is
 
-    CONSTANT CLK_PERIOD : TIME := 10 ns;
-    CONSTANT DEPTH_C : INTEGER := 16;
+    constant CLK_PERIOD : TIME    := 10 ns;
+    constant DEPTH_C    : INTEGER := 16;
 
-    SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '0';
-    SIGNAL flush : STD_LOGIC := '0';
+    signal clk   : STD_LOGIC := '0';
+    signal reset : STD_LOGIC := '0';
+    signal flush : STD_LOGIC := '0';
 
-    SIGNAL wr_en : STD_LOGIC := '0';
-    SIGNAL wr_data : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL wr_eof : STD_LOGIC := '0';
-    SIGNAL wr_abort : STD_LOGIC := '0';
+    signal wr_en    : STD_LOGIC                    := '0';
+    signal wr_data  : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+    signal wr_eof   : STD_LOGIC                    := '0';
+    signal wr_abort : STD_LOGIC                    := '0';
 
-    SIGNAL rd_en : STD_LOGIC := '0';
-    SIGNAL rd_data : STD_LOGIC_VECTOR(7 DOWNTO 0);
-    SIGNAL rd_eof : STD_LOGIC;
-    SIGNAL rd_valid : STD_LOGIC;
+    signal rd_en    : STD_LOGIC := '0';
+    signal rd_data  : STD_LOGIC_VECTOR(7 downto 0);
+    signal rd_eof   : STD_LOGIC;
+    signal rd_valid : STD_LOGIC;
 
-    SIGNAL frame_rdy : STD_LOGIC;
-    SIGNAL full : STD_LOGIC;
-    SIGNAL empty : STD_LOGIC;
+    signal frame_rdy : STD_LOGIC;
+    signal full      : STD_LOGIC;
+    signal empty     : STD_LOGIC;
 
-    TYPE byte_array_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
+    type byte_array_t is array (NATURAL range <>) of STD_LOGIC_VECTOR(7 downto 0);
 
-    PROCEDURE write_burst(
-        SIGNAL clk_s : IN STD_LOGIC;
-        SIGNAL wr_en_s : OUT STD_LOGIC;
-        SIGNAL wr_data_s : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
-        SIGNAL wr_eof_s : OUT STD_LOGIC;
-        CONSTANT data_a : IN byte_array_t;
-        CONSTANT eof_last_c : IN STD_LOGIC
-    ) IS
-    BEGIN
-        FOR i IN data_a'RANGE LOOP
-            WAIT UNTIL rising_edge(clk_s);
-            wr_en_s <= '1';
+    procedure write_burst(
+        signal clk_s        : in STD_LOGIC;
+        signal wr_en_s      : out STD_LOGIC;
+        signal wr_data_s    : out STD_LOGIC_VECTOR(7 downto 0);
+        signal wr_eof_s     : out STD_LOGIC;
+        constant data_a     : in byte_array_t;
+        constant eof_last_c : in STD_LOGIC
+    ) is
+    begin
+        for i in data_a'range loop
+            wait until rising_edge(clk_s);
+            wr_en_s   <= '1';
             wr_data_s <= data_a(i);
-            IF i = data_a'HIGH THEN
+            if i = data_a'HIGH then
                 wr_eof_s <= eof_last_c;
-            ELSE
+            else
                 wr_eof_s <= '0';
-            END IF;
-        END LOOP;
+            end if;
+        end loop;
 
-        WAIT UNTIL rising_edge(clk_s);
-        wr_en_s <= '0';
-        wr_data_s <= (OTHERS => '0');
-        wr_eof_s <= '0';
-    END PROCEDURE;
+        wait until rising_edge(clk_s);
+        wr_en_s   <= '0';
+        wr_data_s <= (others => '0');
+        wr_eof_s  <= '0';
+    end procedure;
 
-    PROCEDURE start_continuous_read(
-        SIGNAL clk_s : IN STD_LOGIC;
-        SIGNAL rd_en_s : OUT STD_LOGIC
-    ) IS
-    BEGIN
-        WAIT UNTIL rising_edge(clk_s);
+    procedure start_continuous_read(
+        signal clk_s   : in STD_LOGIC;
+        signal rd_en_s : out STD_LOGIC
+    ) is
+    begin
+        wait until rising_edge(clk_s);
         rd_en_s <= '1';
-    END PROCEDURE;
+    end procedure;
 
-    PROCEDURE stop_continuous_read(
-        SIGNAL clk_s : IN STD_LOGIC;
-        SIGNAL rd_en_s : OUT STD_LOGIC
-    ) IS
-    BEGIN
-        WAIT UNTIL rising_edge(clk_s);
+    procedure stop_continuous_read(
+        signal clk_s   : in STD_LOGIC;
+        signal rd_en_s : out STD_LOGIC
+    ) is
+    begin
+        wait until rising_edge(clk_s);
         rd_en_s <= '0';
-    END PROCEDURE;
+    end procedure;
 
-    PROCEDURE expect_cycle(
-        CONSTANT valid_c : IN STD_LOGIC;
-        CONSTANT data_c : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-        CONSTANT eof_c : IN STD_LOGIC;
-        CONSTANT msg_c : IN STRING
-    ) IS
-    BEGIN
-        ASSERT rd_valid = valid_c
-        REPORT "rd_valid mismatch: " & msg_c
-            SEVERITY error;
+    procedure expect_cycle(
+        constant valid_c : in STD_LOGIC;
+        constant data_c  : in STD_LOGIC_VECTOR(7 downto 0);
+        constant eof_c   : in STD_LOGIC;
+        constant msg_c   : in STRING
+    ) is
+    begin
+        assert rd_valid = valid_c
+        report "rd_valid mismatch: " & msg_c
+            severity error;
 
-        IF valid_c = '1' THEN
-            ASSERT rd_data = data_c
-            REPORT "rd_data mismatch: " & msg_c
-                SEVERITY error;
+        if valid_c = '1' then
+            assert rd_data = data_c
+            report "rd_data mismatch: " & msg_c
+                severity error;
 
-            ASSERT rd_eof = eof_c
-            REPORT "rd_eof mismatch: " & msg_c
-                SEVERITY error;
-        END IF;
-    END PROCEDURE;
+            assert rd_eof = eof_c
+            report "rd_eof mismatch: " & msg_c
+                severity error;
+        end if;
+    end procedure;
 
-BEGIN
+begin
 
-    dut : ENTITY work.voq_fifo
-        GENERIC MAP(
+    dut : entity work.voq_fifo
+        generic map(
             DEPTH => DEPTH_C
         )
-        PORT MAP(
-            clk => clk,
-            reset => reset,
-            flush => flush,
-            wr_en => wr_en,
-            wr_data => wr_data,
-            wr_eof => wr_eof,
-            wr_abort => wr_abort,
-            rd_en => rd_en,
-            rd_data => rd_data,
-            rd_eof => rd_eof,
-            rd_valid => rd_valid,
+        port map(
+            clk       => clk,
+            reset     => reset,
+            flush     => flush,
+            wr_en     => wr_en,
+            wr_data   => wr_data,
+            wr_eof    => wr_eof,
+            wr_abort  => wr_abort,
+            rd_en     => rd_en,
+            rd_data   => rd_data,
+            rd_eof    => rd_eof,
+            rd_valid  => rd_valid,
             frame_rdy => frame_rdy,
-            full => full,
-            empty => empty
+            full      => full,
+            empty     => empty
         );
 
-    clk <= NOT clk AFTER CLK_PERIOD / 2;
+    clk <= not clk after CLK_PERIOD / 2;
 
-    stim_proc : PROCESS
-    BEGIN
-        REPORT "Starting tb_voq_fifo_gpt" SEVERITY note;
+    stim_proc : process
+    begin
+        report "Starting tb_voq_fifo_gpt" severity note;
 
         -----------------------------------------------------------------------
         -- Reset
         -----------------------------------------------------------------------
-        reset <= '0';
-        flush <= '0';
-        wr_en <= '0';
-        wr_eof <= '0';
+        reset    <= '0';
+        flush    <= '0';
+        wr_en    <= '0';
+        wr_eof   <= '0';
         wr_abort <= '0';
-        rd_en <= '0';
+        rd_en    <= '0';
 
-        WAIT FOR 3 * CLK_PERIOD;
-        WAIT UNTIL rising_edge(clk);
+        wait for 3 * CLK_PERIOD;
+        wait until rising_edge(clk);
         reset <= '1';
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
 
-        ASSERT empty = '1' REPORT "FIFO should be empty after reset" SEVERITY error;
-        ASSERT full = '0' REPORT "FIFO should not be full after reset" SEVERITY error;
-        ASSERT frame_rdy = '0' REPORT "frame_rdy should be 0 after reset" SEVERITY error;
-        ASSERT rd_valid = '0' REPORT "rd_valid should be 0 after reset" SEVERITY error;
+        assert empty = '1' report "FIFO should be empty after reset" severity error;
+        assert full = '0' report "FIFO should not be full after reset" severity error;
+        assert frame_rdy = '0' report "frame_rdy should be 0 after reset" severity error;
+        assert rd_valid = '0' report "rd_valid should be 0 after reset" severity error;
 
         -----------------------------------------------------------------------
         -- TEST 1: Single complete frame, continuous read without gaps
         -----------------------------------------------------------------------
-        REPORT "TEST 1: Single complete frame continuous read" SEVERITY note;
+        report "TEST 1: Single complete frame continuous read" severity note;
 
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"11", 1 => x"22", 2 => x"33"),
-            '1');
+        (0 => x"11", 1 => x"22", 2 => x"33"),
+        '1');
 
-        ASSERT frame_rdy = '1'
-        REPORT "frame_rdy should be 1 after complete frame written"
-            SEVERITY error;
+        assert frame_rdy = '1'
+        report "frame_rdy should be 1 after complete frame written"
+            severity error;
 
         start_continuous_read(clk, rd_en);
 
         -- first cycle after asserting rd_en: pipeline fill
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"11", '0', "TEST 1 / byte 1");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"22", '0', "TEST 1 / byte 2");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"33", '1', "TEST 1 / byte 3");
 
         stop_continuous_read(clk, rd_en);
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy should return to 0 after frame has been read"
-            SEVERITY error;
-        ASSERT empty = '1'
-        REPORT "FIFO should be empty after TEST 1"
-            SEVERITY error;
+        wait until rising_edge(clk);
+        wait for 1 ns;
+        assert frame_rdy = '0'
+        report "frame_rdy should return to 0 after frame has been read"
+            severity error;
+        assert empty = '1'
+        report "FIFO should be empty after TEST 1"
+            severity error;
 
         -----------------------------------------------------------------------
         -- TEST 2: Two frames back-to-back, each read continuously
         -----------------------------------------------------------------------
-        REPORT "TEST 2: Two frames back-to-back continuous read" SEVERITY note;
+        report "TEST 2: Two frames back-to-back continuous read" severity note;
 
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"A1", 1 => x"A2"),
-            '1');
+        (0 => x"A1", 1 => x"A2"),
+        '1');
 
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"B1", 1 => x"B2", 2 => x"B3"),
-            '1');
+        (0 => x"B1", 1 => x"B2", 2 => x"B3"),
+        '1');
 
-        ASSERT frame_rdy = '1'
-        REPORT "frame_rdy should be 1 when frames are stored"
-            SEVERITY error;
+        assert frame_rdy = '1'
+        report "frame_rdy should be 1 when frames are stored"
+            severity error;
 
         start_continuous_read(clk, rd_en);
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"A1", '0', "TEST 2 / frame A byte 1");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"A2", '1', "TEST 2 / frame A byte 2");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"B1", '0', "TEST 2 / frame B byte 1");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"B2", '0', "TEST 2 / frame B byte 2");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"B3", '1', "TEST 2 / frame B byte 3");
 
         stop_continuous_read(clk, rd_en);
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy should be 0 after both frames are read"
-            SEVERITY error;
-        ASSERT empty = '1'
-        REPORT "FIFO should be empty after TEST 2"
-            SEVERITY error;
+        wait until rising_edge(clk);
+        wait for 1 ns;
+        assert frame_rdy = '0'
+        report "frame_rdy should be 0 after both frames are read"
+            severity error;
+        assert empty = '1'
+        report "FIFO should be empty after TEST 2"
+            severity error;
 
         -----------------------------------------------------------------------
         -- TEST 3: Abort an incomplete frame
         -----------------------------------------------------------------------
-        REPORT "TEST 3: Abort incomplete frame" SEVERITY note;
+        report "TEST 3: Abort incomplete frame" severity note;
 
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"C1", 1 => x"C2"),
-            '0');
+        (0 => x"C1", 1 => x"C2"),
+        '0');
 
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy must remain 0 for incomplete frame"
-            SEVERITY error;
+        assert frame_rdy = '0'
+        report "frame_rdy must remain 0 for incomplete frame"
+            severity error;
 
-        WAIT UNTIL rising_edge(clk);
+        wait until rising_edge(clk);
         wr_abort <= '1';
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
-        WAIT UNTIL rising_edge(clk);
+        wait until rising_edge(clk);
+        wait for 1 ns;
+        wait until rising_edge(clk);
         wr_abort <= '0';
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
 
-        ASSERT empty = '1'
-        REPORT "FIFO should be empty after abort"
-            SEVERITY error;
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy should be 0 after abort"
-            SEVERITY error;
-        ASSERT rd_valid = '0'
-        REPORT "rd_valid should be 0 after abort"
-            SEVERITY error;
+        assert empty = '1'
+        report "FIFO should be empty after abort"
+            severity error;
+        assert frame_rdy = '0'
+        report "frame_rdy should be 0 after abort"
+            severity error;
+        assert rd_valid = '0'
+        report "rd_valid should be 0 after abort"
+            severity error;
 
         -----------------------------------------------------------------------
         -- TEST 4: Simultaneous read and write
         -----------------------------------------------------------------------
-        REPORT "TEST 4: Simultaneous read and write" SEVERITY note;
+        report "TEST 4: Simultaneous read and write" severity note;
 
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"D1"),
-            '1');
-        ASSERT frame_rdy = '1'
-        REPORT "frame_rdy should be 1 before simultaneous read/write test"
-            SEVERITY error;
+        (0 => x"D1"),
+        '1');
+        assert frame_rdy = '1'
+        report "frame_rdy should be 1 before simultaneous read/write test"
+            severity error;
 
         -- One cycle: read D1 while writing E1
-        WAIT UNTIL rising_edge(clk);
-        rd_en <= '1';
-        wr_en <= '1';
+        wait until rising_edge(clk);
+        rd_en   <= '1';
+        wr_en   <= '1';
         wr_data <= x"E1";
-        wr_eof <= '0';
+        wr_eof  <= '0';
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"D1", '1', "TEST 4 / simultaneous cycle");
 
         -- IMPORTANT: stop read immediately so E1 is not consumed in next cycle
-        WAIT UNTIL rising_edge(clk);
-        rd_en <= '0';
-        wr_en <= '0';
-        wr_data <= (OTHERS => '0');
-        wr_eof <= '0';
+        wait until rising_edge(clk);
+        rd_en   <= '0';
+        wr_en   <= '0';
+        wr_data <= (others => '0');
+        wr_eof  <= '0';
 
         -- now check status after simultaneous read/write
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy should be 0 because only incomplete frame remains"
-            SEVERITY error;
-        ASSERT empty = '0'
-        REPORT "FIFO should not be empty because one byte remains stored"
-            SEVERITY error;
+        wait until rising_edge(clk);
+        wait for 1 ns;
+        assert frame_rdy = '0'
+        report "frame_rdy should be 0 because only incomplete frame remains"
+            severity error;
+        assert empty = '0'
+        report "FIFO should not be empty because one byte remains stored"
+            severity error;
 
         -- Finish the new frame
         write_burst(clk, wr_en, wr_data, wr_eof,
-            (0 => x"E2"),
-            '1');
-        ASSERT frame_rdy = '1'
-        REPORT "frame_rdy should be 1 after completing new frame"
-            SEVERITY error;
+        (0 => x"E2"),
+        '1');
+        assert frame_rdy = '1'
+        report "frame_rdy should be 1 after completing new frame"
+            severity error;
 
         start_continuous_read(clk, rd_en);
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"E1", '0', "TEST 4 / frame E byte 1");
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
+        wait until rising_edge(clk);
+        wait for 1 ns;
         expect_cycle('1', x"E2", '1', "TEST 4 / frame E byte 2");
 
         stop_continuous_read(clk, rd_en);
 
-        WAIT UNTIL rising_edge(clk);
-        WAIT FOR 1 ns;
-        ASSERT empty = '1'
-        REPORT "FIFO should be empty after TEST 4"
-            SEVERITY error;
-        ASSERT frame_rdy = '0'
-        REPORT "frame_rdy should be 0 after TEST 4"
-            SEVERITY error;
+        wait until rising_edge(clk);
+        wait for 1 ns;
+        assert empty = '1'
+        report "FIFO should be empty after TEST 4"
+            severity error;
+        assert frame_rdy = '0'
+        report "frame_rdy should be 0 after TEST 4"
+            severity error;
 
-        REPORT "All tests in tb_voq_fifo_gpt passed." SEVERITY note;
-        WAIT;
-    END PROCESS;
+        report "All tests in tb_voq_fifo_gpt passed." severity note;
+        wait;
+    end process;
 
-END ARCHITECTURE sim;
+end architecture sim;
