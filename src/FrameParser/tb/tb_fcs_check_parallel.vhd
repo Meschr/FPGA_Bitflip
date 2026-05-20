@@ -5,33 +5,33 @@
 -- end_of_frame pulses on first FCS BYTE (byte 60 here).
 -- ============================================================
 
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-USE ieee.numeric_std.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-ENTITY tb_fcs_check_parallel IS
-END ENTITY;
+entity tb_fcs_check_parallel is
+end entity;
 
-ARCHITECTURE sim OF tb_fcs_check_parallel IS
+architecture sim of tb_fcs_check_parallel is
 
-  SIGNAL clk : STD_LOGIC := '0';
-  SIGNAL reset : STD_LOGIC := '1';
-  SIGNAL start_of_frame : STD_LOGIC := '0';
-  SIGNAL end_of_frame : STD_LOGIC := '0';
-  SIGNAL data_in : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL fcs_error : STD_LOGIC;
-  SIGNAL fcs_ok : STD_LOGIC;
-  SIGNAL data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
-  SIGNAL wr_en : STD_LOGIC;
-  SIGNAL eof_out : STD_LOGIC;
+  signal clk            : STD_LOGIC                    := '0';
+  signal reset          : STD_LOGIC                    := '1';
+  signal start_of_frame : STD_LOGIC                    := '0';
+  signal end_of_frame   : STD_LOGIC                    := '0';
+  signal data_in        : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+  signal fcs_error      : STD_LOGIC;
+  signal fcs_ok         : STD_LOGIC;
+  signal data_out       : STD_LOGIC_VECTOR(7 downto 0);
+  signal wr_en          : STD_LOGIC;
+  signal eof_out        : STD_LOGIC;
 
-  CONSTANT CLK_PERIOD : TIME := 10 ns;
+  constant CLK_PERIOD : TIME := 10 ns;
 
   -- Byte array type
-  TYPE t_byte_array IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
+  type t_byte_array is array (NATURAL range <>) of STD_LOGIC_VECTOR(7 downto 0);
 
   -- Example Ethernet packet (64 bytes total, last 4 are FCS)
-  CONSTANT pkt_ok : t_byte_array(0 to 63) := (
+  constant PKT_OK : t_byte_array(0 to 63) := (
     x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"78", x"90", x"08", x"00", x"45", x"00",
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
@@ -45,7 +45,7 @@ ARCHITECTURE sim OF tb_fcs_check_parallel IS
   );
 
   -- Corrupt packet: change one byte but KEEP same FCS => must error
-  CONSTANT pkt_bad : t_byte_array(0 to 63) := (
+  constant PKT_BAD : t_byte_array(0 to 63) := (
     x"00", x"10", x"A4", x"7B", x"EA", x"80", x"00", x"12",
     x"34", x"56", x"79", x"90", x"08", x"00", x"45", x"00", -- 0x78 -> 0x79
     x"00", x"2E", x"B3", x"FE", x"00", x"00", x"80", x"11",
@@ -59,113 +59,113 @@ ARCHITECTURE sim OF tb_fcs_check_parallel IS
   );
 
   -- Send frame procedure: byte per rising edge
-  PROCEDURE send_frame(
-    CONSTANT pkt : IN t_byte_array;
-    SIGNAL clk_i : IN STD_LOGIC;
-    SIGNAL sof_o : OUT STD_LOGIC;
-    SIGNAL eof_o : OUT STD_LOGIC;
-    SIGNAL data_in_o : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
-    CONSTANT label_text : IN STRING
-  ) IS
-  BEGIN
-    FOR i IN pkt'RANGE LOOP
+  procedure send_frame(
+    constant pkt        : in t_byte_array;
+    signal clk_i        : in STD_LOGIC;
+    signal sof_o        : out STD_LOGIC;
+    signal eof_o        : out STD_LOGIC;
+    signal data_in_o    : out STD_LOGIC_VECTOR(7 downto 0);
+    constant label_text : in STRING
+  ) is
+  begin
+    for i in pkt'range loop
 
       -- start_of_frame on first byte
-      IF i = pkt'low THEN
+      if i = pkt'low then
         sof_o <= '1';
-      ELSE
+      else
         sof_o <= '0';
-      END IF;
+      end if;
 
       -- end_of_frame on last Byte of the whole frame 
-      IF i = (pkt'high) THEN
+      if i = (pkt'high) then
         eof_o <= '1';
-      ELSE
+      else
         eof_o <= '0';
-      END IF;
+      end if;
 
       data_in_o <= pkt(i);
-      WAIT UNTIL rising_edge(clk_i);
-      WAIT FOR 0 ns;
+      wait until rising_edge(clk_i);
+      wait for 0 ns;
 
-      IF i < pkt'high THEN
-        ASSERT wr_en = '1'
-          REPORT label_text & ": wr_en not asserted during frame data"
-          SEVERITY error;
-        ASSERT eof_out = '0'
-          REPORT label_text & ": eof_out asserted too early"
-          SEVERITY error;
-      END IF;
+      if i < pkt'high then
+        assert wr_en = '1'
+        report label_text & ": wr_en not asserted during frame data"
+          severity error;
+        assert eof_out = '0'
+        report label_text & ": eof_out asserted too early"
+          severity error;
+      end if;
 
-    END LOOP;
+    end loop;
 
-    ASSERT wr_en = '0'
-      REPORT label_text & ": wr_en must deassert on end_of_frame"
-      SEVERITY error;
-    ASSERT eof_out = '1'
-      REPORT label_text & ": eof_out not asserted at frame end"
-      SEVERITY error;
-    ASSERT ((fcs_ok = '1' AND fcs_error = '0') OR (fcs_ok = '0' AND fcs_error = '1'))
-      REPORT label_text & ": expected exactly one of fcs_ok/fcs_error high at frame end"
-      SEVERITY error;
+    assert wr_en = '0'
+    report label_text & ": wr_en must deassert on end_of_frame"
+      severity error;
+    assert eof_out = '1'
+    report label_text & ": eof_out not asserted at frame end"
+      severity error;
+    assert ((fcs_ok = '1' and fcs_error = '0') or (fcs_ok = '0' and fcs_error = '1'))
+    report label_text & ": expected exactly one of fcs_ok/fcs_error high at frame end"
+      severity error;
 
     -- idle afterwards
-    sof_o <= '0';
-    eof_o <= '0';
-    data_in_o <= (OTHERS => '0');
-  END PROCEDURE;
+    sof_o     <= '0';
+    eof_o     <= '0';
+    data_in_o <= (others => '0');
+  end procedure;
 
-BEGIN
+begin
 
   -- Clock generation
-  clk <= NOT clk AFTER CLK_PERIOD/2;
+  clk <= not clk after CLK_PERIOD/2;
 
   -- DUT instance
-  dut : ENTITY work.fcs_check_parallel
-  PORT MAP(
-    clk => clk,
-    reset => reset,
-    start_of_frame => start_of_frame,
-    end_of_frame => end_of_frame,
-    data_in => data_in,
-    fcs_error => fcs_error,
-    fcs_ok => fcs_ok,
-    data_out => data_out,
-    wr_en => wr_en,
-    eof_out => eof_out
-  );
+  dut : entity work.fcs_check_parallel
+    port map(
+      clk            => clk,
+      reset          => reset,
+      start_of_frame => start_of_frame,
+      end_of_frame   => end_of_frame,
+      data_in        => data_in,
+      fcs_error      => fcs_error,
+      fcs_ok         => fcs_ok,
+      data_out       => data_out,
+      wr_en          => wr_en,
+      eof_out        => eof_out
+    );
 
   -- Stimulus
-  stim : PROCESS
-  BEGIN
+  stim : process
+  begin
     -- Reset
-    reset <= '0';
+    reset          <= '0';
     start_of_frame <= '0';
-    end_of_frame <= '0';
-    data_in <= (OTHERS => '0');
-    WAIT FOR 5 * CLK_PERIOD;
-    WAIT UNTIL rising_edge(clk);
+    end_of_frame   <= '0';
+    data_in        <= (others => '0');
+    wait for 5 * CLK_PERIOD;
+    wait until rising_edge(clk);
     reset <= '1';
-    WAIT UNTIL rising_edge(clk);
+    wait until rising_edge(clk);
 
     -- Test 1
-    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in, "packet 1");
-    WAIT FOR 4 * CLK_PERIOD;
+    send_frame(PKT_OK, clk, start_of_frame, end_of_frame, data_in, "packet 1");
+    wait for 4 * CLK_PERIOD;
 
     -- Test 2
-    send_frame(pkt_bad, clk, start_of_frame, end_of_frame, data_in, "packet 2");
-    WAIT FOR 4 * CLK_PERIOD;
+    send_frame(PKT_BAD, clk, start_of_frame, end_of_frame, data_in, "packet 2");
+    wait for 4 * CLK_PERIOD;
 
     -- Test 3: reset + valid again
     reset <= '0';
-    WAIT FOR 5 * CLK_PERIOD;
-    WAIT UNTIL rising_edge(clk);
+    wait for 5 * CLK_PERIOD;
+    wait until rising_edge(clk);
     reset <= '1';
-    WAIT UNTIL rising_edge(clk);
+    wait until rising_edge(clk);
 
-    send_frame(pkt_ok, clk, start_of_frame, end_of_frame, data_in, "packet 3 after reset");
+    send_frame(PKT_OK, clk, start_of_frame, end_of_frame, data_in, "packet 3 after reset");
 
-    WAIT;
-  END PROCESS;
+    wait;
+  end process;
 
-END ARCHITECTURE;
+end architecture;

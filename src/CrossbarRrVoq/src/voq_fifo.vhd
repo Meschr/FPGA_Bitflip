@@ -73,8 +73,8 @@ architecture rtl of voq_fifo is
     signal frames_stored : unsigned(ADDR_WIDTH downto 0)     := (others => '0'); -- Complete frames stored
 
     -- Track current frame length to allow rollback on abort
-    signal frame_active    : STD_LOGIC                    := '0';
-    signal frame_byte_cnt  : unsigned(count'range)        := (others => '0');
+    signal frame_active   : STD_LOGIC             := '0';
+    signal frame_byte_cnt : unsigned(count'range) := (others => '0');
 
     -- Read pipeline register
     signal rd_reg       : STD_LOGIC_VECTOR(8 downto 0) := (others => '0'); -- Bit 8: EOF, bits 7-0: data
@@ -105,7 +105,7 @@ begin
     ---------------------------------------------------------------------------
     -- Write port: store data and EOF flag at wr_ptr
     ---------------------------------------------------------------------------
-    write_proc : process(all)
+    write_proc : process (all)
     begin
         if rising_edge(clk) then
             if can_write = '1' then
@@ -118,7 +118,7 @@ begin
     ---------------------------------------------------------------------------
     -- Read port: load rd_reg when reading and track validity
     ---------------------------------------------------------------------------
-    read_proc : process(all)
+    read_proc : process (all)
     begin
         if reset = '0' or flush = '1' then
             rd_reg <= (others => '0');
@@ -132,7 +132,7 @@ begin
     end process read_proc;
 
     -- Decode read register
-    rd_data <= rd_reg(7 downto 0); -- Lower 8 bits = data
+    rd_data  <= rd_reg(7 downto 0);         -- Lower 8 bits = data
     rd_eof   <= rd_reg(8) and rd_valid_reg; -- EOF only valid with rd_valid_reg
     rd_valid <= rd_valid_reg when rd_valid_reg = '1' else
         '0';
@@ -140,18 +140,18 @@ begin
     ---------------------------------------------------------------------------
     -- Pointers, occupancy, and frame tracking
     ---------------------------------------------------------------------------
-    ptr_proc : process(all)
+    ptr_proc : process (all)
         variable count_next : unsigned(count'range);
     begin
 
         if reset = '0' or flush = '1' then
             -- Reset all pointers and counters
-            wr_ptr        <= (others => '0');
-            rd_ptr        <= (others => '0');
-            count         <= (others => '0');
-            frames_stored <= (others => '0');
-            rd_valid_reg  <= '0';
-            frame_active  <= '0';
+            wr_ptr         <= (others => '0');
+            rd_ptr         <= (others => '0');
+            count          <= (others => '0');
+            frames_stored  <= (others => '0');
+            rd_valid_reg   <= '0';
+            frame_active   <= '0';
             frame_byte_cnt <= (others => '0');
         end if;
 
@@ -172,21 +172,21 @@ begin
                 wr_ptr <= wr_ptr - resize(frame_byte_cnt, wr_ptr'length);
                 count_next := count_next - frame_byte_cnt;
                 frame_byte_cnt <= (others => '0');
-                frame_active <= '0';
+                frame_active   <= '0';
             else
                 if can_write = '1' then
                     wr_ptr <= wr_ptr + 1;
                     count_next := count_next + 1;
 
                     if frame_active = '0' then
-                        frame_active <= '1';
+                        frame_active   <= '1';
                         frame_byte_cnt <= to_unsigned(1, frame_byte_cnt'length);
                     else
                         frame_byte_cnt <= frame_byte_cnt + 1;
                     end if;
 
                     if wr_eof = '1' then
-                        frame_active <= '0';
+                        frame_active   <= '0';
                         frame_byte_cnt <= (others => '0');
                     end if;
                 end if;

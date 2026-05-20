@@ -1,75 +1,75 @@
 library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+use IEEE.STD_LOGIC_1164.all;
+use IEEE.NUMERIC_STD.all;
 
 entity tb_mac_read is
 end tb_mac_read;
 
 architecture rtl of tb_mac_read is
-    constant ADDR_WIDTH : positive := 13;
-    constant DATA_WIDTH : positive := 8;
-    constant CLK_PERIOD : time := 8 ns; -- 125 MHz
-    
+    constant ADDR_WIDTH : POSITIVE := 13;
+    constant DATA_WIDTH : POSITIVE := 8;
+    constant CLK_PERIOD : TIME := 8 ns; -- 125 MHz
+
     -- One-hot encoded port outputs (4-bit vectors - used by mac_read output)
-    constant PORT_0_ONEHOT : std_logic_vector(3 downto 0) := "0001";
-    constant PORT_1_ONEHOT : std_logic_vector(3 downto 0) := "0010";
-    
+    constant PORT_0_ONEHOT : STD_LOGIC_VECTOR(3 downto 0) := "0001";
+    constant PORT_1_ONEHOT : STD_LOGIC_VECTOR(3 downto 0) := "0010";
+
     -- BRAM data encoding: 2-bit port in bits[1:0], validity in bits[7:2]
     -- Bits 7-2: validity/reserved (set to "111111" for valid, "000000" for invalid)
     -- Bits 1-0: 2-bit port encoding (00=port0, 01=port1, 10=port2, 11=port3)
-    constant BRAM_VALID_DEST_0 : std_logic_vector(7 downto 0) := "11111100";  -- valid, port 0 (2-bit: 00)
-    constant BRAM_VALID_DEST_1 : std_logic_vector(7 downto 0) := "11111101";  -- valid, port 1 (2-bit: 01)
-    constant BRAM_INVALID      : std_logic_vector(7 downto 0) := "00000000";  -- invalid
+    constant BRAM_VALID_DEST_0 : STD_LOGIC_VECTOR(7 downto 0) := "11111100"; -- valid, port 0 (2-bit: 00)
+    constant BRAM_VALID_DEST_1 : STD_LOGIC_VECTOR(7 downto 0) := "11111101"; -- valid, port 1 (2-bit: 01)
+    constant BRAM_INVALID : STD_LOGIC_VECTOR(7 downto 0) := "00000000"; -- invalid
 
-    signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal clk : STD_LOGIC := '0';
+    signal rst : STD_LOGIC := '0';
 
     -- BRAM port A (connected to mac_read)
-    signal bram_addr_a : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal bram_q_a    : std_logic_vector(DATA_WIDTH - 1 downto 0) := (others => '0');
-    signal bram_rden_a : std_logic := '0';
+    signal bram_addr_a : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal bram_q_a : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0) := (others => '0');
+    signal bram_rden_a : STD_LOGIC := '0';
 
     -- BRAM port B (used by testbench to pre-load memory)
-    signal bram_addr_b : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal bram_data_b : std_logic_vector(DATA_WIDTH - 1 downto 0) := (others => '0');
-    signal bram_wren_b : std_logic := '0';
+    signal bram_addr_b : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal bram_data_b : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0) := (others => '0');
+    signal bram_wren_b : STD_LOGIC := '0';
 
     -- mac_read inputs
-    signal mac_addr0 : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal mac_req0  : std_logic := '0';
-    signal mac_addr1 : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal mac_req1  : std_logic := '0';
-    signal mac_addr2 : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal mac_req2  : std_logic := '0';
-    signal mac_addr3 : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal mac_req3  : std_logic := '0';
+    signal mac_addr0 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal mac_req0 : STD_LOGIC := '0';
+    signal mac_addr1 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal mac_req1 : STD_LOGIC := '0';
+    signal mac_addr2 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal mac_req2 : STD_LOGIC := '0';
+    signal mac_addr3 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal mac_req3 : STD_LOGIC := '0';
 
     -- mac_read outputs (now using 4-bit one-hot encoding)
-    signal dest0  : std_logic_vector(3 downto 0);
-    signal valid0 : std_logic;
-    signal dest1  : std_logic_vector(3 downto 0);
-    signal valid1 : std_logic;
-    signal dest2  : std_logic_vector(3 downto 0);
-    signal valid2 : std_logic;
-    signal dest3  : std_logic_vector(3 downto 0);
-    signal valid3 : std_logic;
+    signal dest0 : STD_LOGIC_VECTOR(3 downto 0);
+    signal valid0 : STD_LOGIC;
+    signal dest1 : STD_LOGIC_VECTOR(3 downto 0);
+    signal valid1 : STD_LOGIC;
+    signal dest2 : STD_LOGIC_VECTOR(3 downto 0);
+    signal valid2 : STD_LOGIC;
+    signal dest3 : STD_LOGIC_VECTOR(3 downto 0);
+    signal valid3 : STD_LOGIC;
 
     -- cycle counter
-    signal cycle_count : integer := 0;
+    signal cycle_count : INTEGER := 0;
 
 begin
 
     -- Instantiate BRAM
     u_bram : entity work.bram
-        generic map (
+        generic map(
             ADDR_WIDTH => ADDR_WIDTH,
             DATA_WIDTH => DATA_WIDTH
         )
-        port map (
+        port map(
             address_a => bram_addr_a,
             address_b => bram_addr_b,
             clock     => clk,
-            data_a    => (others => '0'), -- not used on port A
+            data_a => (others => '0'), -- not used on port A
             data_b    => bram_data_b,
             rden_a    => bram_rden_a,
             rden_b    => '0',
@@ -81,11 +81,11 @@ begin
 
     -- Instantiate mac_read
     u_mac_read : entity work.mac_read
-        generic map (
+        generic map(
             ADDR_WIDTH => ADDR_WIDTH,
             DATA_WIDTH => DATA_WIDTH
         )
-        port map (
+        port map(
             clk    => clk,
             rst    => rst,
             addr0  => mac_addr0,
@@ -121,7 +121,7 @@ begin
     end process;
 
     -- cycle counter
-    cycle_counter : process(clk)
+    cycle_counter : process (clk)
     begin
         if rising_edge(clk) then
             cycle_count <= cycle_count + 1;
@@ -142,7 +142,7 @@ begin
 
         -- Pre-load BRAM using port B
         -- Addr 100: invalid (all zeros)
-        bram_addr_b <= std_logic_vector(to_unsigned(100, ADDR_WIDTH));
+        bram_addr_b <= STD_LOGIC_VECTOR(to_unsigned(100, ADDR_WIDTH));
         bram_data_b <= BRAM_INVALID;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
@@ -150,7 +150,7 @@ begin
         wait until rising_edge(clk);
 
         -- Addr 200: valid entry dest=0 (one-hot port 0)
-        bram_addr_b <= std_logic_vector(to_unsigned(200, ADDR_WIDTH));
+        bram_addr_b <= STD_LOGIC_VECTOR(to_unsigned(200, ADDR_WIDTH));
         bram_data_b <= BRAM_VALID_DEST_0;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
@@ -158,7 +158,7 @@ begin
         wait until rising_edge(clk);
 
         -- Addr 201: valid entry dest=1 (one-hot port 1)
-        bram_addr_b <= std_logic_vector(to_unsigned(201, ADDR_WIDTH));
+        bram_addr_b <= STD_LOGIC_VECTOR(to_unsigned(201, ADDR_WIDTH));
         bram_data_b <= BRAM_VALID_DEST_1;
         bram_wren_b <= '1';
         wait until rising_edge(clk);
@@ -169,7 +169,7 @@ begin
         wait for CLK_PERIOD * 2;
 
         -- PHASE 1: Request address 100 (invalid)
-        mac_addr0 <= std_logic_vector(to_unsigned(100, ADDR_WIDTH));
+        mac_addr0 <= STD_LOGIC_VECTOR(to_unsigned(100, ADDR_WIDTH));
         mac_req0 <= '1';
         wait for CLK_PERIOD * 3; -- allow round robin + read latency
         mac_req0 <= '0';
@@ -182,7 +182,7 @@ begin
         end if;
 
         -- PHASE 2: Request address 200 (valid dest 0)
-        mac_addr1 <= std_logic_vector(to_unsigned(200, ADDR_WIDTH));
+        mac_addr1 <= STD_LOGIC_VECTOR(to_unsigned(200, ADDR_WIDTH));
         mac_req1 <= '1';
         wait for CLK_PERIOD * 3;
         mac_req1 <= '0';
@@ -191,11 +191,11 @@ begin
         if valid1 = '1' and dest1 = PORT_0_ONEHOT then
             report "PASS: addr 200 produced valid1=1 dest1=" & to_string(PORT_0_ONEHOT) & " as expected" severity NOTE;
         else
-            report "FAIL: addr 200 mismatch: valid1=" & std_logic'image(valid1) & " dest1=" & to_string(dest1) severity WARNING;
+            report "FAIL: addr 200 mismatch: valid1=" & STD_LOGIC'image(valid1) & " dest1=" & to_string(dest1) severity WARNING;
         end if;
 
         -- PHASE 3: Request address 201 (valid dest 1)
-        mac_addr2 <= std_logic_vector(to_unsigned(201, ADDR_WIDTH));
+        mac_addr2 <= STD_LOGIC_VECTOR(to_unsigned(201, ADDR_WIDTH));
         mac_req2 <= '1';
         wait for CLK_PERIOD * 3;
         mac_req2 <= '0';
@@ -204,7 +204,7 @@ begin
         if valid2 = '1' and dest2 = PORT_1_ONEHOT then
             report "PASS: addr 201 produced valid2=1 dest2=" & to_string(PORT_1_ONEHOT) & " as expected" severity NOTE;
         else
-            report "FAIL: addr 201 mismatch: valid2=" & std_logic'image(valid2) & " dest2=" & to_string(dest2) severity WARNING;
+            report "FAIL: addr 201 mismatch: valid2=" & STD_LOGIC'image(valid2) & " dest2=" & to_string(dest2) severity WARNING;
         end if;
 
         report "============================================" severity NOTE;

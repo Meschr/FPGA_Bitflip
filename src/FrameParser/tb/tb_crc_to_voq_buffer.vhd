@@ -20,44 +20,44 @@
 -- Ein Monitor-Prozess loggt jedes Lesebyte, wenn rd_dest_port_en aktiv ist.
 -- =============================================================================
 
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-USE ieee.numeric_std.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-ENTITY tb_crc_to_voq_buffer IS
-END ENTITY tb_crc_to_voq_buffer;
+entity tb_crc_to_voq_buffer is
+end entity tb_crc_to_voq_buffer;
 
-ARCHITECTURE sim OF tb_crc_to_voq_buffer IS
+architecture sim of tb_crc_to_voq_buffer is
 
     ---------------------------------------------------------------------------
     -- Konstanten
     ---------------------------------------------------------------------------
-    CONSTANT CLK_PERIOD : TIME := 10 ns;
-    CONSTANT DEPTH : INTEGER := 64;
-    CONSTANT FRAME_LEN : INTEGER := 15;
-    CONSTANT FLAG_OFFSET : INTEGER := 6; -- Flag im 6. Takt (= 5 Takte NACH Byte 1)
+    constant CLK_PERIOD  : TIME    := 10 ns;
+    constant DEPTH       : INTEGER := 64;
+    constant FRAME_LEN   : INTEGER := 15;
+    constant FLAG_OFFSET : INTEGER := 6; -- Flag im 6. Takt (= 5 Takte NACH Byte 1)
 
     ---------------------------------------------------------------------------
     -- Frame-Daten
     ---------------------------------------------------------------------------
-    TYPE byte_array_t IS ARRAY(1 TO FRAME_LEN) OF STD_LOGIC_VECTOR(7 DOWNTO 0);
+    type byte_array_t is array(1 to FRAME_LEN) of STD_LOGIC_VECTOR(7 downto 0);
 
-    CONSTANT FRAME_1 : byte_array_t := (
+    constant FRAME_1 : byte_array_t := (
         x"A1", x"A2", x"A3", x"A4", x"A5",
         x"A6", x"A7", x"A8", x"A9", x"AA",
         x"AB", x"AC", x"AD", x"AE", x"AF"
     );
-    CONSTANT FRAME_2 : byte_array_t := (
+    constant FRAME_2 : byte_array_t := (
         x"B1", x"B2", x"B3", x"B4", x"B5",
         x"B6", x"B7", x"B8", x"B9", x"BA",
         x"BB", x"BC", x"BD", x"BE", x"BF"
     );
-    CONSTANT FRAME_3 : byte_array_t := (
+    constant FRAME_3 : byte_array_t := (
         x"C1", x"C2", x"C3", x"C4", x"C5",
         x"C6", x"C7", x"C8", x"C9", x"CA",
         x"CB", x"CC", x"CD", x"CE", x"CF"
     );
-    CONSTANT FRAME_4 : byte_array_t := (
+    constant FRAME_4 : byte_array_t := (
         x"D1", x"D2", x"D3", x"D4", x"D5",
         x"D6", x"D7", x"D8", x"D9", x"DA",
         x"DB", x"DC", x"DD", x"DE", x"DF"
@@ -66,138 +66,138 @@ ARCHITECTURE sim OF tb_crc_to_voq_buffer IS
     ---------------------------------------------------------------------------
     -- DUT-Signale
     ---------------------------------------------------------------------------
-    SIGNAL clk : STD_LOGIC := '0';
-    SIGNAL reset : STD_LOGIC := '0';
-    SIGNAL flush : STD_LOGIC := '0';
-    SIGNAL sim_done : BOOLEAN := false;
+    signal clk      : STD_LOGIC := '0';
+    signal reset    : STD_LOGIC := '0';
+    signal flush    : STD_LOGIC := '0';
+    signal sim_done : BOOLEAN   := false;
 
     -- Schreibseite
-    SIGNAL wr_en : STD_LOGIC := '0';
-    SIGNAL wr_data : STD_LOGIC_VECTOR(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL wr_eof : STD_LOGIC := '0';
+    signal wr_en   : STD_LOGIC                    := '0';
+    signal wr_data : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+    signal wr_eof  : STD_LOGIC                    := '0';
 
     -- Frame-Metadaten
-    SIGNAL dest_port : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL dest_port_flag : STD_LOGIC := '0';
+    signal dest_port      : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+    signal dest_port_flag : STD_LOGIC                    := '0';
 
     -- Leseseite
-    SIGNAL rd_data : STD_LOGIC_VECTOR(7 DOWNTO 0);
-    SIGNAL rd_eof : STD_LOGIC;
-    SIGNAL rd_dest_port_en : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    signal rd_data         : STD_LOGIC_VECTOR(7 downto 0);
+    signal rd_eof          : STD_LOGIC;
+    signal rd_dest_port_en : STD_LOGIC_VECTOR(3 downto 0);
 
     -- Status
-    SIGNAL frame_rdy : STD_LOGIC;
-    SIGNAL full : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    signal frame_rdy : STD_LOGIC;
+    signal full      : STD_LOGIC_VECTOR(3 downto 0);
 
-BEGIN
+begin
 
     ---------------------------------------------------------------------------
     -- Clock-Erzeugung
     ---------------------------------------------------------------------------
-    clk_gen : PROCESS
-    BEGIN
-        WHILE NOT sim_done LOOP
+    clk_gen : process
+    begin
+        while not sim_done loop
             clk <= '0';
-            WAIT FOR CLK_PERIOD / 2;
+            wait for CLK_PERIOD / 2;
             clk <= '1';
-            WAIT FOR CLK_PERIOD / 2;
-        END LOOP;
-        WAIT;
-    END PROCESS;
+            wait for CLK_PERIOD / 2;
+        end loop;
+        wait;
+    end process;
 
     ---------------------------------------------------------------------------
     -- DUT
     ---------------------------------------------------------------------------
-    DUT : ENTITY work.crc_to_voq_buffer
-        GENERIC MAP(
-            DEPTH => DEPTH,
+    DUT : entity work.crc_to_voq_buffer
+        generic map(
+            DEPTH       => DEPTH,
             NUM_OUTPUTS => 4
         )
-        PORT MAP(
-            clk => clk,
+        port map(
+            clk   => clk,
             reset => reset,
             flush => flush,
 
-            wr_en => wr_en,
+            wr_en   => wr_en,
             wr_data => wr_data,
-            wr_eof => wr_eof,
+            wr_eof  => wr_eof,
 
-            dest_port => dest_port,
+            dest_port      => dest_port,
             dest_port_flag => dest_port_flag,
 
-            rd_data => rd_data,
-            rd_eof => rd_eof,
+            rd_data         => rd_data,
+            rd_eof          => rd_eof,
             rd_dest_port_en => rd_dest_port_en,
 
             frame_rdy => frame_rdy,
-            full => full
+            full      => full
         );
 
     ---------------------------------------------------------------------------
     -- Stimuli
     ---------------------------------------------------------------------------
-    stim : PROCESS
+    stim : process
 
         -----------------------------------------------------------------------
         -- Sendet ein Frame: 15 Datenbytes, mit dest_port_flag im 6. Takt
         -----------------------------------------------------------------------
-        PROCEDURE send_frame(
-            CONSTANT data : IN byte_array_t;
-            CONSTANT port_oh : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
-            CONSTANT frame_id : IN INTEGER
-        ) IS
-        BEGIN
-            REPORT "==================================================";
-            REPORT "Sende Frame " & INTEGER'image(frame_id)
+        procedure send_frame(
+            constant data     : in byte_array_t;
+            constant port_oh  : in STD_LOGIC_VECTOR(3 downto 0);
+            constant frame_id : in INTEGER
+        ) is
+        begin
+            report "==================================================";
+            report "Sende Frame " & INTEGER'image(frame_id)
                 & " (" & INTEGER'image(FRAME_LEN) & " Bytes)"
                 & " -> Port (One-Hot) = " & to_string(port_oh);
 
-            FOR i IN 1 TO FRAME_LEN LOOP
-                WAIT UNTIL rising_edge(clk);
+            for i in 1 to FRAME_LEN loop
+                wait until rising_edge(clk);
 
                 -- Datenbyte und Schreibfreigabe
-                wr_en <= '1';
+                wr_en   <= '1';
                 wr_data <= data(i);
 
                 -- EOF nur auf dem letzten Byte
-                IF i = FRAME_LEN THEN
+                if i = FRAME_LEN then
                     wr_eof <= '1';
-                ELSE
+                else
                     wr_eof <= '0';
-                END IF;
+                end if;
 
                 -- Im 6. Takt (= 5 Takte nach Byte 1): Port-Adresse + Flag
-                IF i = FLAG_OFFSET THEN
+                if i = FLAG_OFFSET then
                     dest_port_flag <= '1';
-                    dest_port <= port_oh;
-                ELSIF i = FLAG_OFFSET + 1 THEN
+                    dest_port      <= port_oh;
+                elsif i = FLAG_OFFSET + 1 then
                     -- Flag nach 1 Takt wieder loslassen
                     dest_port_flag <= '0';
-                    dest_port <= (OTHERS => '0');
-                END IF;
-            END LOOP;
+                    dest_port      <= (others => '0');
+                end if;
+            end loop;
 
             -- Schreibseite ausschalten
-            WAIT UNTIL rising_edge(clk);
-            wr_en <= '0';
-            wr_eof <= '0';
-            wr_data <= (OTHERS => '0');
+            wait until rising_edge(clk);
+            wr_en   <= '0';
+            wr_eof  <= '0';
+            wr_data <= (others => '0');
 
             -- Warten, bis das Frame komplett ausgelesen ist
             -- (Read laeuft parallel zum Write; reichlich Margin)
-            WAIT FOR 25 * CLK_PERIOD;
-        END PROCEDURE;
+            wait for 25 * CLK_PERIOD;
+        end procedure;
 
-    BEGIN
+    begin
         -----------------------------------------------------------------------
         -- Reset-Phase
         -----------------------------------------------------------------------
-        REPORT "Reset...";
+        report "Reset...";
         reset <= '0';
-        WAIT FOR 4 * CLK_PERIOD;
-        WAIT UNTIL rising_edge(clk);
+        wait for 4 * CLK_PERIOD;
+        wait until rising_edge(clk);
         reset <= '1';
-        WAIT FOR 2 * CLK_PERIOD;
+        wait for 2 * CLK_PERIOD;
 
         -----------------------------------------------------------------------
         -- 4 Frames an je einen anderen Zielport
@@ -210,29 +210,29 @@ BEGIN
         -----------------------------------------------------------------------
         -- Auslaufen lassen, dann beenden
         -----------------------------------------------------------------------
-        WAIT FOR 10 * CLK_PERIOD;
-        REPORT "==================================================";
-        REPORT "Simulation beendet";
+        wait for 10 * CLK_PERIOD;
+        report "==================================================";
+        report "Simulation beendet";
         sim_done <= true;
-        WAIT;
-    END PROCESS;
+        wait;
+    end process;
 
     ---------------------------------------------------------------------------
     -- Monitor: loggt jedes Lesebyte, wenn rd_dest_port_en /= 0
     ---------------------------------------------------------------------------
-    monitor : process(all)
-    BEGIN
-        IF rising_edge(clk) THEN
-            IF rd_dest_port_en /= "0000" THEN
-                IF rd_eof = '1' THEN
-                    REPORT "  READ -> dest_en=" & to_string(rd_dest_port_en)
+    monitor : process (all)
+    begin
+        if rising_edge(clk) then
+            if rd_dest_port_en /= "0000" then
+                if rd_eof = '1' then
+                    report "  READ -> dest_en=" & to_string(rd_dest_port_en)
                         & "  data=0x" & to_hstring(rd_data) & "  [EOF]";
-                ELSE
-                    REPORT "  READ -> dest_en=" & to_string(rd_dest_port_en)
+                else
+                    report "  READ -> dest_en=" & to_string(rd_dest_port_en)
                         & "  data=0x" & to_hstring(rd_data);
-                END IF;
-            END IF;
-        END IF;
-    END PROCESS;
+                end if;
+            end if;
+        end if;
+    end process;
 
-END ARCHITECTURE sim;
+end architecture sim;

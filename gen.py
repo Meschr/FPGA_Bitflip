@@ -29,7 +29,7 @@ with OUTPUT_FILE.open("w", encoding="utf-8") as tex:
         tex.write(
             f"""\\lstinputlisting[
                 style={style},
-                caption={{{file.name}}},
+                caption={{{file.name.replace("_","\\_")}}},
                 label={{{label}}}
             ]{{{file.as_posix()}}}
 

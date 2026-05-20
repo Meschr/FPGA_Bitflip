@@ -48,22 +48,22 @@ end mac_table;
 architecture rtl of mac_table is
 
     -- Hash outputs and ready signals
-    signal src_hash0, src_hash1, src_hash2, src_hash3     : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal src_hash0, src_hash1, src_hash2, src_hash3 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
     signal src_ready0, src_ready1, src_ready2, src_ready3 : STD_LOGIC;
-    signal src_ack0, src_ack1, src_ack2, src_ack3         : STD_LOGIC;
-    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3     : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal src_ack0, src_ack1, src_ack2, src_ack3 : STD_LOGIC;
+    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
     signal dst_ready0, dst_ready1, dst_ready2, dst_ready3 : STD_LOGIC;
-    signal dst_ack0, dst_ack1, dst_ack2, dst_ack3         : STD_LOGIC;
+    signal dst_ack0, dst_ack1, dst_ack2, dst_ack3 : STD_LOGIC;
 
     -- BRAM signals
     signal bram_addr_a, bram_addr_b : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-    signal bram_data_b              : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
-    signal bram_q_a, bram_q_b       : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
+    signal bram_data_b : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
+    signal bram_q_a, bram_q_b : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
     signal bram_rden_a, bram_rden_b : STD_LOGIC;
-    signal bram_wren_b              : STD_LOGIC;
+    signal bram_wren_b : STD_LOGIC;
 
     -- mac_read outputs
-    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig     : STD_LOGIC_VECTOR(3 downto 0);
+    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig : STD_LOGIC_VECTOR(3 downto 0);
     signal valid0_sig, valid1_sig, valid2_sig, valid3_sig : STD_LOGIC;
 
 begin
@@ -231,13 +231,13 @@ begin
         );
 
     -- Connect mac_read outputs to entity outputs
-    dst0       <= dest0_sig;
+    dst0 <= dest0_sig;
+    dst1 <= dest1_sig;
+    dst2 <= dest2_sig;
+    dst3 <= dest3_sig;
     dst_valid0 <= valid0_sig;
-    dst1       <= dest1_sig;
     dst_valid1 <= valid1_sig;
-    dst2       <= dest2_sig;
     dst_valid2 <= valid2_sig;
-    dst3       <= dest3_sig;
     dst_valid3 <= valid3_sig;
 
     -- mac_write instance (writes to BRAM port B using source hashes)
