@@ -65,19 +65,19 @@ begin
             -- Source port 0
             src_mac0   => src_mac0,
             src_req0   => src_req0,
-            fcs_valid0 => fcs_valid0,
+            fcs_ok0 => fcs_valid0,
             -- Source port 1
             src_mac1   => src_mac1,
             src_req1   => src_req1,
-            fcs_valid1 => fcs_valid1,
+            fcs_ok1 => fcs_valid1,
             -- Source port 2
             src_mac2   => src_mac2,
             src_req2   => src_req2,
-            fcs_valid2 => fcs_valid2,
+            fcs_ok2 => fcs_valid2,
             -- Source port 3
             src_mac3   => src_mac3,
             src_req3   => src_req3,
-            fcs_valid3 => fcs_valid3,
+            fcs_ok3 => fcs_valid3,
             -- Destination port 0
             dst_mac0 => dst_mac0,
             dst_req0 => dst_req0,

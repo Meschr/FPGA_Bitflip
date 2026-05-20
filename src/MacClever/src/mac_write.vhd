@@ -39,18 +39,22 @@ entity mac_write is
         rst : in STD_LOGIC;
 
         -- Inputs
-        addr0  : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-        req0   : in STD_LOGIC;
-        valid0 : in STD_LOGIC;
-        addr1  : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-        req1   : in STD_LOGIC;
-        valid1 : in STD_LOGIC;
-        addr2  : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-        req2   : in STD_LOGIC;
-        valid2 : in STD_LOGIC;
-        addr3  : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-        req3   : in STD_LOGIC;
-        valid3 : in STD_LOGIC;
+        addr0    : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+        req0     : in STD_LOGIC;
+        fcs_ok0  : in STD_LOGIC;
+        fcs_err0 : in STD_LOGIC;
+        addr1    : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+        req1     : in STD_LOGIC;
+        fcs_ok1  : in STD_LOGIC;
+        fcs_err1 : in STD_LOGIC;
+        addr2    : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+        req2     : in STD_LOGIC;
+        fcs_ok2  : in STD_LOGIC;
+        fcs_err2 : in STD_LOGIC;
+        addr3    : in STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+        req3     : in STD_LOGIC;
+        fcs_ok3  : in STD_LOGIC;
+        fcs_err3 : in STD_LOGIC;
 
         -- Outputs
         ack0 : out STD_LOGIC;
@@ -84,10 +88,6 @@ architecture rtl of mac_write is
     signal ren_next : STD_LOGIC;
 
 begin
-    ack0 <= ack0_sig;
-    ack1 <= ack1_sig;
-    ack2 <= ack2_sig;
-    ack3 <= ack3_sig;
     expiry_ratelimiter : process (all)
     begin
         if rst = '0' then
@@ -209,33 +209,38 @@ begin
             reqcnt_reg <= '0';
         elsif rising_edge(clk) then
             -- Valid signal registration: set by input, cleared by ack
+            
+            ack0 <= ack0_sig or fcs_err0;
             if ack0_sig = '1' then
                 valid0_reg <= '0';
-            elsif valid0 = '1' then
+            elsif fcs_ok0 = '1' then
                 valid0_reg <= '1';
             else
                 valid0_reg <= valid0_reg;
             end if;
 
+            ack1 <= ack1_sig or fcs_err1;
             if ack1_sig = '1' then
                 valid1_reg <= '0';
-            elsif valid1 = '1' then
+            elsif fcs_ok1 = '1' then
                 valid1_reg <= '1';
             else
                 valid1_reg <= valid1_reg;
             end if;
 
+            ack2 <= ack2_sig or fcs_err2;
             if ack2_sig = '1' then
                 valid2_reg <= '0';
-            elsif valid2 = '1' then
+            elsif fcs_ok2 = '1' then
                 valid2_reg <= '1';
             else
                 valid2_reg <= valid2_reg;
             end if;
 
+            ack3 <= ack3_sig or fcs_err3;
             if ack3_sig = '1' then
                 valid3_reg <= '0';
-            elsif valid3 = '1' then
+            elsif fcs_ok3 = '1' then
                 valid3_reg <= '1';
             else
                 valid3_reg <= valid3_reg;

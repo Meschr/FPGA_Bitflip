@@ -97,15 +97,15 @@ begin
             -- Port 0
             addr0  => mac_addr0,
             req0   => mac_req0,
-            valid0 => mac_valid0,
+            fcs_ok0 => mac_valid0,
             -- Port 1
             addr1  => mac_addr1,
             req1   => mac_req1,
-            valid1 => mac_valid1,
+            fcs_ok1 => mac_valid1,
             -- Port 2
             addr2  => mac_addr2,
             req2   => mac_req2,
-            valid2 => mac_valid2,
+            fcs_ok2 => mac_valid2,
             -- Port 3
             addr3  => mac_addr3,
             req3   => mac_req3,
