@@ -52,3 +52,4 @@ simulation/
 # Quartus folder for project
 # ==========================
 quartus/*
+appendix_generated.tex
