@@ -131,8 +131,10 @@ begin
         wr_data_in2 <= (others => '0');
         wr_data_in3 <= (others => '0');
 
-        -- Reset
+        -- Reset (active low)
         wait for 3 * CLK_PERIOD;
+        reset <= '0';
+        WAIT FOR CLK_PERIOD;
         reset <= '1';
         wait for CLK_PERIOD;
 
