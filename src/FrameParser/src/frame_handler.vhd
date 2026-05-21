@@ -7,17 +7,16 @@ entity frame_handler is
         clk   : in STD_LOGIC;
         reset : in STD_LOGIC;
 
-        -- inputs
         data_in               : in STD_LOGIC_VECTOR(7 downto 0);
         data_valid            : in STD_LOGIC;
         buffer_dest_port      : in STD_LOGIC_VECTOR(3 downto 0);
         buffer_dest_port_flag : in STD_LOGIC;
-        --outputs
+
         data_out    : out STD_LOGIC_VECTOR(7 downto 0);
-        eof_handler : out STD_LOGIC; -- for voq
+        eof_handler : out STD_LOGIC;
         dst_port    : out STD_LOGIC_VECTOR(3 downto 0);
-        crc_valid   : out STD_LOGIC; -- signal for MAC learning to store dst_adr
-        fcs_error   : out STD_LOGIC; -- '1' wenn CRC fehlerhaft war
+        crc_valid   : out STD_LOGIC;
+        fcs_error   : out STD_LOGIC;
         dst_mac     : inout STD_LOGIC_VECTOR(47 downto 0);
         dst_valid   : out STD_LOGIC;
         src_mac     : inout STD_LOGIC_VECTOR(47 downto 0);
@@ -26,9 +25,8 @@ entity frame_handler is
 end entity;
 
 architecture rtl of frame_handler is
-    -- output frameparser
-    signal sof_int  : STD_LOGIC := '0'; -- Start of Frame
-    signal eof_int  : STD_LOGIC := '0'; -- End of Frame
+    signal sof_int  : STD_LOGIC := '0';
+    signal eof_int  : STD_LOGIC := '0';
     signal data_int : STD_LOGIC_VECTOR(7 downto 0);
 
     -- output fcs_check_parallel    
@@ -36,14 +34,14 @@ architecture rtl of frame_handler is
     signal fcs_ok_int      : STD_LOGIC := '0';
     signal fcs_error_int   : STD_LOGIC := '0';
     signal bit_valid_int   : STD_LOGIC := '0';
-    signal eof_int_delayed : STD_LOGIC := '0'; -- EOF synchronized with FCS output
+    signal eof_int_delayed : STD_LOGIC := '0';
     signal buffer_flush    : STD_LOGIC := '0';
 
 begin
 
     buffer_flush <= fcs_error_int;
-    crc_valid <= fcs_ok_int;
-    fcs_error <= fcs_error_int;
+    crc_valid    <= fcs_ok_int;
+    fcs_error    <= fcs_error_int;
 
     u_frameparser : entity work.frame_parser
         port map(
@@ -98,9 +96,9 @@ begin
 
             -- outputs
             rd_data         => data_out,
-            rd_eof          => eof_handler, -- pulse when EOF is detected
-            rd_en_dest_port => dst_port,    -- enable singal for the voq
-            crc_valid       => fcs_ok_int   -- pulse when FCS is correct, used for MAC learning
+            rd_eof          => eof_handler, 
+            rd_en_dest_port => dst_port,    -- enable signal for the VOQ
+            crc_valid       => fcs_ok_int   
         );
 
 end architecture rtl;

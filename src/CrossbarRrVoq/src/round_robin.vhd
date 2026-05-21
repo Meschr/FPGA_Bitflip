@@ -23,54 +23,61 @@ use ieee.numeric_std.all;
 
 entity round_robin is
     port (
-        clk       : in  std_logic;                      
-        reset     : in  std_logic;                      -- Async reset, active low
-        frame_rdy : in  std_logic_vector(3 downto 0);   -- FIFO has a full frame (one bit per input)
-        eof       : in  std_logic;                      -- EOF from currently granted FIFO
-        sel       : out std_logic_vector(1 downto 0);   -- Binary index of granted FIFO (for the output mux)
-        grant     : out std_logic_vector(3 downto 0);   -- One-hot read enable for selected FIFO
-        active    : out std_logic                       -- Indicates grant is locked to a frame
+        clk       : in STD_LOGIC;
+        reset     : in STD_LOGIC;                     -- Async reset, active low
+        frame_rdy : in STD_LOGIC_VECTOR(3 downto 0);  -- FIFO has a full frame (one bit per input)
+        eof       : in STD_LOGIC;                     -- EOF from currently granted FIFO
+        sel       : out STD_LOGIC_VECTOR(1 downto 0); -- Binary index of granted FIFO (for the output mux)
+        grant     : out STD_LOGIC_VECTOR(3 downto 0); -- One-hot read enable for selected FIFO
+        active    : out STD_LOGIC                     -- Indicates grant is locked to a frame
     );
 end entity round_robin;
 
 architecture rtl of round_robin is
 
-    type state_t is (IDLE, LOCKED);
+    type state_t is (IDLE, LOCKED, GAP);
 
-    signal state_reg   : state_t := IDLE;
-    signal state_next  : state_t;
-    signal rr_ptr_reg  : unsigned(1 downto 0) := (others => '0');
-    signal rr_ptr_next : unsigned(1 downto 0);
-    signal sel_reg     : unsigned(1 downto 0) := (others => '0');
-    signal sel_next    : unsigned(1 downto 0);
+    constant GAP_CYCLES : NATURAL := 11;
+
+    signal state_reg    : state_t := IDLE;
+    signal state_next   : state_t;
+    signal rr_ptr_reg   : unsigned(1 downto 0) := (others => '0');
+    signal rr_ptr_next  : unsigned(1 downto 0);
+    signal sel_reg      : unsigned(1 downto 0) := (others => '0');
+    signal sel_next     : unsigned(1 downto 0);
+    signal gap_cnt_reg  : unsigned(3 downto 0) := (others => '0');
+    signal gap_cnt_next : unsigned(3 downto 0);
 
 begin
     -- -------------------------------------------------------------------------
     -- Register process. The reset is asynchronous and active low.
-    seq_proc : process(all)
+    seq_proc : process (all)
     begin
         if reset = '0' then
-            state_reg  <= IDLE;
-            rr_ptr_reg <= (others => '0');
-            sel_reg    <= (others => '0');
+            state_reg   <= IDLE;
+            rr_ptr_reg  <= (others => '0');
+            sel_reg     <= (others => '0');
+            gap_cnt_reg <= (others => '0');
         elsif rising_edge(clk) then
-            state_reg  <= state_next;
-            rr_ptr_reg <= rr_ptr_next;
-            sel_reg    <= sel_next;
+            state_reg   <= state_next;
+            rr_ptr_reg  <= rr_ptr_next;
+            sel_reg     <= sel_next;
+            gap_cnt_reg <= gap_cnt_next;
         end if;
     end process seq_proc;
 
     -- -------------------------------------------------------------------------
     -- Next-state logic. In IDLE, the search starts at rr_ptr_reg and checks all
     -- four FIFOs in round-robin order. In LOCKED, the grant is held until EOF.
-    comb_proc : process(all)
-        variable found_v : boolean;
-        variable index_v : integer range 0 to 3;
+    comb_proc : process (all)
+        variable found_v : BOOLEAN;
+        variable index_v : INTEGER range 0 to 3;
         variable cand_v  : unsigned(1 downto 0);
     begin
-        state_next  <= state_reg;
-        rr_ptr_next <= rr_ptr_reg;
-        sel_next    <= sel_reg;
+        state_next   <= state_reg;
+        rr_ptr_next  <= rr_ptr_reg;
+        sel_next     <= sel_reg;
+        gap_cnt_next <= gap_cnt_reg;
 
         case state_reg is
             when IDLE =>
@@ -95,28 +102,39 @@ begin
             when LOCKED =>
                 -- End of frame: move pointer to the next FIFO.
                 if eof = '1' then
-                    rr_ptr_next <= sel_reg + 1;
-                    state_next  <= IDLE;
+                    rr_ptr_next  <= sel_reg + 1;
+                    state_next   <= GAP;
+                    gap_cnt_next <= (others => '0');
+                end if;
+
+            when GAP =>
+                -- Enforce end-of-frame gap before selecting the next frame.
+                if gap_cnt_reg = to_unsigned(GAP_CYCLES - 1, gap_cnt_reg'length) then
+                    state_next   <= IDLE;
+                    gap_cnt_next <= (others => '0');
+                else
+                    gap_cnt_next <= gap_cnt_reg + 1;
                 end if;
         end case;
     end process comb_proc;
 
     -- -------------------------------------------------------------------------
     -- Drive mux select and indicate when the arbiter is locked to a frame.
-    sel    <= std_logic_vector(sel_reg);
-    active <= '1' when state_reg = LOCKED else '0';
+    sel    <= STD_LOGIC_VECTOR(sel_reg);
+    active <= '1' when state_reg = LOCKED else
+        '0';
 
     -- -------------------------------------------------------------------------
     -- Convert the selected index into one-hot read enable.
-    grant_proc : process(all)
+    grant_proc : process (all)
     begin
         grant <= (others => '0');
 
         if state_reg = LOCKED then
             case sel_reg is
-                when "00"   => grant <= "0001";
-                when "01"   => grant <= "0010";
-                when "10"   => grant <= "0100";
+                when "00"   => grant   <= "0001";
+                when "01"   => grant   <= "0010";
+                when "10"   => grant   <= "0100";
                 when others => grant <= "1000";
             end case;
         end if;

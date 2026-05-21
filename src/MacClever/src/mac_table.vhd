@@ -14,16 +14,20 @@ entity mac_table is
 
         src_mac0   : in STD_LOGIC_VECTOR(47 downto 0);
         src_req0   : in STD_LOGIC;
-        fcs_valid0 : in STD_LOGIC;
+        fcs_ok0 : in STD_LOGIC;
+        fcs_err0   : in STD_LOGIC;
         src_mac1   : in STD_LOGIC_VECTOR(47 downto 0);
         src_req1   : in STD_LOGIC;
-        fcs_valid1 : in STD_LOGIC;
+        fcs_ok1 : in STD_LOGIC;
+        fcs_err1   : in STD_LOGIC;
         src_mac2   : in STD_LOGIC_VECTOR(47 downto 0);
         src_req2   : in STD_LOGIC;
-        fcs_valid2 : in STD_LOGIC;
+        fcs_ok2 : in STD_LOGIC;
+        fcs_err2   : in STD_LOGIC;
         src_mac3   : in STD_LOGIC_VECTOR(47 downto 0);
         src_req3   : in STD_LOGIC;
-        fcs_valid3 : in STD_LOGIC;
+        fcs_ok3 : in STD_LOGIC;
+        fcs_err3   : in STD_LOGIC;
 
         dst_mac0 : in STD_LOGIC_VECTOR(47 downto 0);
         dst_req0 : in STD_LOGIC;
@@ -48,22 +52,22 @@ end mac_table;
 architecture rtl of mac_table is
 
     -- Hash outputs and ready signals
-    signal src_hash0, src_hash1, src_hash2, src_hash3     : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal src_hash0, src_hash1, src_hash2, src_hash3 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
     signal src_ready0, src_ready1, src_ready2, src_ready3 : STD_LOGIC;
-    signal src_ack0, src_ack1, src_ack2, src_ack3         : STD_LOGIC;
-    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3     : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
+    signal src_ack0, src_ack1, src_ack2, src_ack3 : STD_LOGIC;
+    signal dst_hash0, dst_hash1, dst_hash2, dst_hash3 : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
     signal dst_ready0, dst_ready1, dst_ready2, dst_ready3 : STD_LOGIC;
-    signal dst_ack0, dst_ack1, dst_ack2, dst_ack3         : STD_LOGIC;
+    signal dst_ack0, dst_ack1, dst_ack2, dst_ack3 : STD_LOGIC;
 
     -- BRAM signals
     signal bram_addr_a, bram_addr_b : STD_LOGIC_VECTOR(ADDR_WIDTH - 1 downto 0);
-    signal bram_data_b              : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
-    signal bram_q_a, bram_q_b       : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
+    signal bram_data_b : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
+    signal bram_q_a, bram_q_b : STD_LOGIC_VECTOR(DATA_WIDTH - 1 downto 0);
     signal bram_rden_a, bram_rden_b : STD_LOGIC;
-    signal bram_wren_b              : STD_LOGIC;
+    signal bram_wren_b : STD_LOGIC;
 
     -- mac_read outputs
-    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig     : STD_LOGIC_VECTOR(3 downto 0);
+    signal dest0_sig, dest1_sig, dest2_sig, dest3_sig : STD_LOGIC_VECTOR(3 downto 0);
     signal valid0_sig, valid1_sig, valid2_sig, valid3_sig : STD_LOGIC;
 
 begin
@@ -231,13 +235,13 @@ begin
         );
 
     -- Connect mac_read outputs to entity outputs
-    dst0       <= dest0_sig;
+    dst0 <= dest0_sig;
+    dst1 <= dest1_sig;
+    dst2 <= dest2_sig;
+    dst3 <= dest3_sig;
     dst_valid0 <= valid0_sig;
-    dst1       <= dest1_sig;
     dst_valid1 <= valid1_sig;
-    dst2       <= dest2_sig;
     dst_valid2 <= valid2_sig;
-    dst3       <= dest3_sig;
     dst_valid3 <= valid3_sig;
 
     -- mac_write instance (writes to BRAM port B using source hashes)
@@ -248,28 +252,32 @@ begin
             FORGET_CNT => FORGET_CNT
         )
         port map(
-            clk    => clk,
-            rst    => rst,
-            addr0  => src_hash0,
-            req0   => src_ready0,
-            valid0 => fcs_valid0,
-            ack0   => src_ack0,
-            addr1  => src_hash1,
-            req1   => src_ready1,
-            valid1 => fcs_valid1,
-            ack1   => src_ack1,
-            addr2  => src_hash2,
-            req2   => src_ready2,
-            valid2 => fcs_valid2,
-            ack2   => src_ack2,
-            addr3  => src_hash3,
-            req3   => src_ready3,
-            valid3 => fcs_valid3,
-            ack3   => src_ack3,
-            addr   => bram_addr_b,
-            wen    => bram_wren_b,
-            wdata  => bram_data_b,
-            ren    => bram_rden_b,
-            rdata  => bram_q_b
+            clk      => clk,
+            rst      => rst,
+            addr0    => src_hash0,
+            req0     => src_ready0,
+            fcs_ok0  => fcs_ok0,
+            fcs_err0 => fcs_err0,
+            ack0     => src_ack0,
+            addr1    => src_hash1,
+            req1     => src_ready1,
+            fcs_ok1  => fcs_ok1,
+            fcs_err1 => fcs_err1,
+            ack1     => src_ack1,
+            addr2    => src_hash2,
+            req2     => src_ready2,
+            fcs_ok2  => fcs_ok2,
+            fcs_err2 => fcs_err2,
+            ack2     => src_ack2,
+            addr3    => src_hash3,
+            req3     => src_ready3,
+            fcs_ok3  => fcs_ok3,
+            fcs_err3 => fcs_err3,
+            ack3     => src_ack3,
+            addr     => bram_addr_b,
+            wen      => bram_wren_b,
+            wdata    => bram_data_b,
+            ren      => bram_rden_b,
+            rdata    => bram_q_b
         );
 end rtl;
