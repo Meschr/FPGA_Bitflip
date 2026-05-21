@@ -75,6 +75,7 @@ architecture sim of tb_crc_to_voq_buffer is
     signal wr_en   : STD_LOGIC                    := '0';
     signal wr_data : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
     signal wr_eof  : STD_LOGIC                    := '0';
+    signal crc_valid : STD_LOGIC                  := '1';
 
     -- Frame-Metadaten
     signal dest_port      : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
@@ -83,11 +84,8 @@ architecture sim of tb_crc_to_voq_buffer is
     -- Leseseite
     signal rd_data         : STD_LOGIC_VECTOR(7 downto 0);
     signal rd_eof          : STD_LOGIC;
-    signal rd_dest_port_en : STD_LOGIC_VECTOR(3 downto 0);
-
-    -- Status
-    signal frame_rdy : STD_LOGIC;
-    signal full      : STD_LOGIC_VECTOR(3 downto 0);
+    signal rd_en_dest_port : STD_LOGIC_VECTOR(3 downto 0);
+    signal crc_valid_out   : STD_LOGIC;
 
 begin
 
@@ -110,8 +108,7 @@ begin
     ---------------------------------------------------------------------------
     DUT : entity work.crc_to_voq_buffer
         generic map(
-            DEPTH       => DEPTH,
-            NUM_OUTPUTS => 4
+            DEPTH => DEPTH
         )
         port map(
             clk   => clk,
@@ -121,16 +118,15 @@ begin
             wr_en   => wr_en,
             wr_data => wr_data,
             wr_eof  => wr_eof,
+            crc_valid => crc_valid,
 
             dest_port      => dest_port,
             dest_port_flag => dest_port_flag,
 
             rd_data         => rd_data,
             rd_eof          => rd_eof,
-            rd_dest_port_en => rd_dest_port_en,
-
-            frame_rdy => frame_rdy,
-            full      => full
+            rd_en_dest_port => rd_en_dest_port,
+            crc_valid_out   => crc_valid_out
         );
 
     ---------------------------------------------------------------------------
@@ -223,12 +219,12 @@ begin
     monitor : process (all)
     begin
         if rising_edge(clk) then
-            if rd_dest_port_en /= "0000" then
+            if rd_en_dest_port /= "0000" then
                 if rd_eof = '1' then
-                    report "  READ -> dest_en=" & to_string(rd_dest_port_en)
+                    report "  READ -> dest_en=" & to_string(rd_en_dest_port)
                         & "  data=0x" & to_hstring(rd_data) & "  [EOF]";
                 else
-                    report "  READ -> dest_en=" & to_string(rd_dest_port_en)
+                    report "  READ -> dest_en=" & to_string(rd_en_dest_port)
                         & "  data=0x" & to_hstring(rd_data);
                 end if;
             end if;
