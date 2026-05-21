@@ -153,9 +153,7 @@ begin
             rd_valid_reg   <= '0';
             frame_active   <= '0';
             frame_byte_cnt <= (others => '0');
-        end if;
-
-        if rising_edge(clk) then
+        elsif rising_edge(clk) then
             -- rd_valid_reg follows can_read; cleared immediately after EOF
             rd_valid_reg <= can_read and not (rd_reg(8) and rd_valid_reg);
 

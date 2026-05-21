@@ -182,10 +182,10 @@ begin
 
     -- BRAM instance (shared by mac_read and mac_write)
     mac_bram : entity work.bram
-        generic map(
-            ADDR_WIDTH => ADDR_WIDTH,
-            DATA_WIDTH => DATA_WIDTH
-        )
+        -- generic map(
+        --     ADDR_WIDTH => ADDR_WIDTH,
+        --     DATA_WIDTH => DATA_WIDTH
+        -- )
         port map(
             address_a => bram_addr_a,
             address_b => bram_addr_b,

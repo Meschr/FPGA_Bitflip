@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity bram is
     generic (
-        ADDR_WIDTH : POSITIVE := 13;
+        ADDR_WIDTH : POSITIVE := 14;
         DATA_WIDTH : POSITIVE := 8
     );
     port (
