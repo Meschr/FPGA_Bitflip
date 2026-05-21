@@ -220,4 +220,4 @@ def generate_4ports(n_valid_per_port: int = 4, n_corrupt_per_port: int = 1, outd
 
 
 if __name__ == "__main__":
-    generate_4ports(n_valid_per_port=4, n_corrupt_per_port=1)
+    generate_4ports(n_valid_per_port=2, n_corrupt_per_port=1)
